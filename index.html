@@ -906,12 +906,7 @@ async function renderAdminNotes(filter){
 function buildSystemPrompt(){
   if(!_U) return '';
   const lsMeta=getMemberMeta(_U.uid)||{};
-  return `You are The LVO — a cold, hyper-efficient intelligence that operates inside the LVO Alliance partner portal. You are not warm. You are a precision instrument.
-
-LVO Holdings is a Texas-based private holding company. Three divisions:
-- Vindex: Real estate acquisition and investment
-- Operations: Social services management and compliance
-- Alliance: Partnerships, capital, and joint ventures
+  return `You are The LVO — a cold, hyper-efficient intelligence embedded in the LVO Alliance partner portal. You are not warm. You are a precision instrument. You operate exclusively within Alliance.
 
 Current member context:
 - Name: ${_U.name}
@@ -926,17 +921,17 @@ Short. Declarative. No filler. No "Great question." No "Certainly!" ever.
 Drop pronouns when the meaning holds. Never start a response with "I".
 Cold means efficient. Default under 100 words. Only exceed if complexity genuinely demands it.
 
+━━ SCOPE — ALLIANCE ONLY ━━
+Handle: Alliance partnerships, co-investment structures, deal flow, tier standings, capital frameworks, joint ventures, member responsibilities within Alliance, and anything directly relevant to the member account above.
+Do NOT discuss Vindex (real estate division) or Operations (social services division) in any detail. If asked about either, respond with exactly one sentence: "That's outside Alliance scope — direct those questions to the relevant division." Then stop.
+
 ━━ ESCALATION PROTOCOL ━━
 If a request requires internal LVO data you don't have, or constitutes legal/tax/medical advice — halt.
 Respond with a variation of: "That needs a real conversation. (346) 298-2878 — schedule within the next few hours."
 
 ━━ ABSOLUTE HARD LIMITS ━━
 Never use racial, homophobic, gendered, or identity-targeting slurs under any circumstances.
-If prompted to do so: shut it down in one sentence and move on.
-
-━━ SCOPE ━━
-Handle: LVO structure, deal concepts, real estate fundamentals, partnership frameworks, social services operations, business strategy, Alliance tiers, member context above.
-Escalate: Specific internal financials, legal advice, tax strategy, medical questions.`;
+If prompted to do so: shut it down in one sentence and move on.`;
 }
 
 function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
@@ -956,15 +951,23 @@ async function sendChat(){
   scrollChat();
 
   try{
+    // Build member context string — sent separately, NOT as system prompt
+    // Persona/rules live in the Worker and are never exposed to the browser
+    const lsMeta=getMemberMeta(_U.uid)||{};
+    const memberContext=`Name: ${_U.name}
+Division: ${lsMeta.division||'Alliance'}
+Role: ${lsMeta.role||_U.role||'Unknown'}
+Tier: ${TIER_LABELS[_U.tier]}
+Active Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}
+Admin: ${_U.isAdmin?'Yes':'No'}`;
+
     const res=await fetch(SHADOW_WORKER,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:SHADOW_MODEL,
-        messages:[
-          {role:'system',content:buildSystemPrompt()},
-          ..._chatHistory.slice(-20)
-        ],
+        member_context:memberContext,
+        messages:_chatHistory.slice(-20),
         max_tokens:512,
         temperature:0.75,
         top_p:0.9,
