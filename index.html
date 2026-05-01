@@ -714,10 +714,12 @@ function renderOvAnn(){
   const last=el.querySelector('div:last-child');if(last)last.style.borderBottom='none';
 }
 
-function renderAnnList(){
-  const el=document.getElementById('annList');let data=[..._ann];
-  if(_annFilter==='pinned')data=data.filter(a=>a.pinned);
-  if(_annFilter==='div')data=data.filter(a=>!a.division||a.division==='All'||a.division==='Alliance');
+function renderAnnList() {
+  const el = document.getElementById('annList');
+  let data = [..._ann];
+  if (_annFilter === 'pinned') data = data.filter(a => a.pinned);
+  if (_annFilter === 'all') data = data.filter(a => a.division === 'All' || a.division === 'Alliance');
+  if (_annFilter === 'div') data = data.filter(a => a.division === 'Alliance');
   if(!data.length){el.innerHTML='<div class="empty" style="padding:1.5rem">No announcements found.</div>';return;}
   el.innerHTML=data.map(a=>`<div class="ann${a.pinned?' pinned':''}"><div class="ann-hd"><div>${a.pinned?'<span class="ann-pin-badge">★ Pinned · </span>':''}<span class="ann-title">${esc(a.title||'')}</span></div><span class="ann-div">${esc(a.division||'All')}</span></div><div class="ann-body">${esc(a.body||'')}</div><div class="ann-ft"><span class="ann-author">${esc(a.author||'LVO Administration')}</span><span class="ann-time">${new Date(a.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span></div></div>`).join('');
 }
