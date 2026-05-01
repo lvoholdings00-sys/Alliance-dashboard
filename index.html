@@ -717,7 +717,7 @@ function renderOvAnn(){
 function renderAnnList() {
   const el = document.getElementById('annList');
   let data = [..._ann];
-  if (_annFilter === 'pinned') data = data.filter(a => a.pinned);
+  if (_annFilter === 'pinned') data = data.filter(a => a.pinned && (a.division === 'Alliance' || a.division === 'All'));
   if (_annFilter === 'all') data = data.filter(a => a.division === 'All' || a.division === 'Alliance');
   if (_annFilter === 'div') data = data.filter(a => a.division === 'Alliance');
   if(!data.length){el.innerHTML='<div class="empty" style="padding:1.5rem">No announcements found.</div>';return;}
