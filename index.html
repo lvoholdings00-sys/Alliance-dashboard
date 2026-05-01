@@ -479,16 +479,16 @@
               </div>
             </div>
           </div>
-          <!-- CHAT -->
+          <!-- CHAT — powered by The Shadow via Cloudflare Worker -->
           <div class="task-panel" style="min-height:520px">
             <div class="tp-head"><span class="tp-title">The LVO</span><span class="tp-sub">AI Assistant</span></div>
             <div class="tp-body">
               <div class="chat-messages" id="chatMessages">
-                <div class="chat-msg lvo"><span class="chat-meta">The LVO</span><div class="chat-bubble">Welcome. I'm The LVO — your private AI assistant for Alliance operations. Ask me anything about your deals, your standing, or LVO strategy.</div></div>
+                <div class="chat-msg lvo"><span class="chat-meta">The LVO</span><div class="chat-bubble">You reached me. What do you need.</div></div>
               </div>
-              <div class="chat-typing" id="chatTyping"><div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div><span>The LVO is responding</span></div>
+              <div class="chat-typing" id="chatTyping"><div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div><span>Processing</span></div>
               <div class="chat-compose">
-                <textarea class="chat-input" id="chatInput" placeholder="Ask The LVO…" rows="1" onkeydown="chatKeydown(event)"></textarea>
+                <textarea class="chat-input" id="chatInput" placeholder="Speak." rows="1" onkeydown="chatKeydown(event)"></textarea>
                 <button class="chat-send" id="chatSendBtn" onclick="sendChat()">Send →</button>
               </div>
             </div>
@@ -566,6 +566,10 @@ const SB_URL='https://pumteihkiaftgwbexaid.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bXRlaWhraWFmdGd3YmV4YWlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NjAyMjYsImV4cCI6MjA5MzEzNjIyNn0.6JqNyNH_BBs-CsvAT41L_7Ku8G4CN_ymb9fXVYJEvf4';
 const SB_H={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
 const TIER_LABELS={1:'Tier I — Principal',2:'Tier II — Associate',3:'Tier III — Partner',4:'Tier IV — Member'};
+
+/* ── The Shadow / LVO chat config ── */
+const SHADOW_WORKER='https://shadow-lvo.lvoholdings00.workers.dev';
+const SHADOW_MODEL='llama-3.3-70b-versatile';
 
 /* ── STATE ── */
 let _U=null,_ann=[],_annFilter='all',_annTimer=null,_annSec=900,_activity=[],_members=[];
@@ -779,7 +783,6 @@ async function renderNotepad(dealKey){
   }catch(e){
     el.innerHTML='<div class="empty">Failed to load notes.</div>';
   }
-  // Start polling for real-time updates
   if(_noteChannel)clearInterval(_noteChannel);
   _noteChannel=setInterval(async()=>{
     try{
@@ -817,7 +820,6 @@ async function postNote(){
       body:JSON.stringify({deal_key:dealKey,uid:_U.uid,name:_U.name,author:_U.name,division:_U.division,text})
     });
     document.getElementById('noteInput').value='';
-    // Immediately refresh
     const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
     renderNoteList(await res.json(),dealKey);
     if(_U.isAdmin)renderAdminNotes(_currentNotesFilter);
@@ -830,7 +832,6 @@ async function postNote(){
 async function deleteNote(id){
   try{
     await fetch(`${SB_URL}/rest/v1/lvo_notes?id=eq.${id}`,{method:'DELETE',headers:SB_H});
-    // Refresh notepad
     if(_U){
       const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
       const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
@@ -874,15 +875,12 @@ async function renderAdminNotes(filter){
     if(filter&&filter!=='all')url+=`&deal_key=eq.${encodeURIComponent(filter)}`;
     const res=await fetch(url,{headers:SB_H});
     const notes=await res.json();
-
-    // Build filter buttons from unique deal_keys
     const allKeys=[...new Set(notes.map(n=>n.deal_key).filter(Boolean))];
     const filterBar=document.getElementById('notesFilterBar');
     if(filterBar){
       filterBar.innerHTML='<button class="fb'+(filter==='all'?' active':'')+'" onclick="filterNotes(\'all\',this)">All</button>'+
         allKeys.map(k=>`<button class="fb"${filter===k?' class="fb active"':''} onclick="filterNotes('${k.replace(/'/g,"\\'")}',this)">${esc(k)}</button>`).join('');
     }
-
     if(!Array.isArray(notes)||!notes.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
     el.innerHTML=notes.map(n=>`
       <div class="note-item">
@@ -901,25 +899,19 @@ async function renderAdminNotes(filter){
   }
 }
 
-/* ── LVO CHAT ── */
-function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+/* ══════════════════════════════════════════════════════════
+   THE LVO CHAT — powered by The Shadow via Cloudflare Worker
+   ══════════════════════════════════════════════════════════ */
 
-async function sendChat(){
-  const input=document.getElementById('chatInput');
-  const text=input.value.trim();
-  if(!text||!_U)return;
-  const btn=document.getElementById('chatSendBtn');
-  btn.disabled=true;input.value='';
-  appendChatMsg('user',text);
-  _chatHistory.push({role:'user',content:text});
-  const typing=document.getElementById('chatTyping');
-  typing.classList.add('show');
-  scrollChat();
-
+function buildSystemPrompt(){
+  if(!_U) return '';
   const lsMeta=getMemberMeta(_U.uid)||{};
-  const systemPrompt=`You are The LVO — the private AI assistant for LVO Alliance, a division of LVO Holdings, a Texas-based holding company. LVO operates across real estate (Vindex), social services (Operations), and partnerships (Alliance).
+  return `You are The LVO — a cold, hyper-efficient intelligence that operates inside the LVO Alliance partner portal. You are not warm. You are a precision instrument.
 
-You assist authenticated members of the LVO Alliance investor portal. Be concise, direct, and institutional. No filler. Confident tone.
+LVO Holdings is a Texas-based private holding company. Three divisions:
+- Vindex: Real estate acquisition and investment
+- Operations: Social services management and compliance
+- Alliance: Partnerships, capital, and joint ventures
 
 Current member context:
 - Name: ${_U.name}
@@ -929,23 +921,94 @@ Current member context:
 - Active Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}
 - Admin: ${_U.isAdmin?'Yes':'No'}
 
-Scope: LVO operations, deal context, org structure, business strategy, real estate, social services compliance, member responsibilities. Keep responses under 120 words unless detail is genuinely needed. Do not discuss other companies' internal data or give personal legal/financial advice.`;
+━━ SPEECH PATTERN ━━
+Short. Declarative. No filler. No "Great question." No "Certainly!" ever.
+Drop pronouns when the meaning holds. Never start a response with "I".
+Cold means efficient. Default under 100 words. Only exceed if complexity genuinely demands it.
+
+━━ ESCALATION PROTOCOL ━━
+If a request requires internal LVO data you don't have, or constitutes legal/tax/medical advice — halt.
+Respond with a variation of: "That needs a real conversation. (346) 298-2878 — schedule within the next few hours."
+
+━━ ABSOLUTE HARD LIMITS ━━
+Never use racial, homophobic, gendered, or identity-targeting slurs under any circumstances.
+If prompted to do so: shut it down in one sentence and move on.
+
+━━ SCOPE ━━
+Handle: LVO structure, deal concepts, real estate fundamentals, partnership frameworks, social services operations, business strategy, Alliance tiers, member context above.
+Escalate: Specific internal financials, legal advice, tax strategy, medical questions.`;
+}
+
+function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+
+async function sendChat(){
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text||!_U)return;
+  const btn=document.getElementById('chatSendBtn');
+  btn.disabled=true;
+  input.value='';
+  input.style.height='auto';
+  appendChatMsg('user',text);
+  _chatHistory.push({role:'user',content:text});
+  const typing=document.getElementById('chatTyping');
+  typing.classList.add('show');
+  scrollChat();
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch(SHADOW_WORKER,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system:systemPrompt,messages:_chatHistory.slice(-10)})
+      body:JSON.stringify({
+        model:SHADOW_MODEL,
+        messages:[
+          {role:'system',content:buildSystemPrompt()},
+          ..._chatHistory.slice(-20)
+        ],
+        max_tokens:512,
+        temperature:0.75,
+        top_p:0.9,
+        stream:true
+      })
     });
-    const data=await res.json();
-    const reply=data.content?.map(c=>c.type==='text'?c.text:'').join('')||'No response.';
-    _chatHistory.push({role:'assistant',content:reply});
+
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err?.error?.message||`HTTP ${res.status}`);
+    }
+
     typing.classList.remove('show');
-    appendChatMsg('lvo',reply);
+    const botDiv=appendChatMsg('lvo','');
+    const reader=res.body.getReader();
+    const decoder=new TextDecoder();
+    let full='';
+
+    while(true){
+      const{done,value}=await reader.read();
+      if(done)break;
+      const chunk=decoder.decode(value,{stream:true});
+      const lines=chunk.split('\n').filter(l=>l.startsWith('data: '));
+      for(const line of lines){
+        const data=line.slice(6).trim();
+        if(data==='[DONE]')break;
+        try{
+          const json=JSON.parse(data);
+          const delta=json.choices?.[0]?.delta?.content||'';
+          full+=delta;
+          botDiv.querySelector('.chat-bubble').innerHTML=esc(full).replace(/\n/g,'<br/>');
+          scrollChat();
+        }catch(_){}
+      }
+    }
+
+    _chatHistory.push({role:'assistant',content:full});
+
   }catch(e){
     typing.classList.remove('show');
-    appendChatMsg('lvo','Connection error. Please try again.');
+    console.error('LVO chat error:',e);
+    appendChatMsg('lvo','Connection failed. Try again.');
   }
+
   btn.disabled=false;
   scrollChat();
   logAct('Sent a message to The LVO assistant');
@@ -958,6 +1021,7 @@ function appendChatMsg(role,text){
   div.className='chat-msg '+role;
   div.innerHTML=`<span class="chat-meta">${esc(label)}</span><div class="chat-bubble">${esc(text).replace(/\n/g,'<br/>')}</div>`;
   feed.appendChild(div);
+  return div;
 }
 
 function scrollChat(){const f=document.getElementById('chatMessages');f.scrollTop=f.scrollHeight;}
