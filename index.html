@@ -444,7 +444,6 @@
               <span class="ct">Organization Notes</span>
               <div style="display:flex;gap:.5rem;flex-wrap:wrap" id="notesFilterBar">
                 <button class="fb active" onclick="filterNotes('all',this)">All</button>
-                <button class="fb" onclick="filterNotes('Project LVO',this)">Project LVO</button>
               </div>
             </div>
             <div style="padding:.5rem 1.4rem;max-height:300px;overflow-y:auto" id="adminNotesList"><div class="empty">No notes yet.</div></div>
@@ -571,6 +570,7 @@ const TIER_LABELS={1:'Tier I — Principal',2:'Tier II — Associate',3:'Tier II
 /* ── STATE ── */
 let _U=null,_ann=[],_annFilter='all',_annTimer=null,_annSec=900,_activity=[],_members=[];
 let _clerkProfileMounted=false,_dashboardPopulated=false,_chatHistory=[];
+let _noteChannel=null,_currentNotesFilter='all';
 
 /* ── UTILS ── */
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
@@ -607,7 +607,6 @@ function populateDash(user){
   const joined=user.createdAt?new Date(user.createdAt).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
   const deals=Array.isArray(meta.active_deals)?meta.active_deals:[];
 
-  // Ensure local record exists
   if(!getMemberMeta(user.id)){
     setMemberMeta(user.id,{name,email,tier:tier,division,role,onboarded:!!lsMeta.onboarded,joinedRaw:user.createdAt});
   }
@@ -712,19 +711,19 @@ async function fetchAnn(manual=false){
 }
 
 function renderOvAnn(){
-  const el=document.getElementById('ovAnn')
-  const items = _ann.filter(a => a.division === 'Alliance' || a.division === 'All').slice(0, 3);
+  const el=document.getElementById('ovAnn');
+  const items=_ann.filter(a=>a.division==='Alliance'||a.division==='All').slice(0,3);
   if(!items.length){el.innerHTML='<div class="empty">No announcements yet.</div>';return;}
   el.innerHTML=items.map(a=>`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">${a.pinned?'<span class="ann-pin-badge">★ </span>':''}<div style="font-family:\'Cinzel\',serif;font-size:.54rem;letter-spacing:.1em;color:var(--chrome);margin-bottom:.25rem">${esc(a.title||'')}</div><div style="font-size:.8rem;font-style:italic;color:var(--dim2)">${esc((a.body||'').slice(0,90))}${(a.body||'').length>90?'…':''}</div></div>`).join('');
   const last=el.querySelector('div:last-child');if(last)last.style.borderBottom='none';
 }
 
-function renderAnnList() {
-  const el = document.getElementById('annList');
-  let data = [..._ann];
-  if (_annFilter === 'pinned') data = data.filter(a => a.pinned && (a.division === 'Alliance' || a.division === 'All'));
-  if (_annFilter === 'all') data = data.filter(a => a.division === 'All' || a.division === 'Alliance');
-  if (_annFilter === 'div') data = data.filter(a => a.division === 'Alliance');
+function renderAnnList(){
+  const el=document.getElementById('annList');
+  let data=[..._ann];
+  if(_annFilter==='pinned')data=data.filter(a=>a.pinned&&(a.division==='Alliance'||a.division==='All'));
+  if(_annFilter==='all')data=data.filter(a=>a.division==='All'||a.division==='Alliance');
+  if(_annFilter==='div')data=data.filter(a=>a.division==='Alliance');
   if(!data.length){el.innerHTML='<div class="empty" style="padding:1.5rem">No announcements found.</div>';return;}
   el.innerHTML=data.map(a=>`<div class="ann${a.pinned?' pinned':''}"><div class="ann-hd"><div>${a.pinned?'<span class="ann-pin-badge">★ Pinned · </span>':''}<span class="ann-title">${esc(a.title||'')}</span></div><span class="ann-div">${esc(a.division||'All')}</span></div><div class="ann-body">${esc(a.body||'')}</div><div class="ann-ft"><span class="ann-author">${esc(a.author||'LVO Administration')}</span><span class="ann-time">${new Date(a.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span></div></div>`).join('');
 }
@@ -751,7 +750,6 @@ function initTaskLog(user,tier,isAdmin,deals){
   document.getElementById('taskContent').style.display=canAccess?'block':'none';
   if(!canAccess)return;
 
-  // Finance snapshot
   const latest=deals[0]||null;
   const lsMeta=getMemberMeta(user.id)||{};
   document.getElementById('snapDeals').textContent=deals.length||'0';
@@ -761,79 +759,105 @@ function initTaskLog(user,tier,isAdmin,deals){
   document.getElementById('snapDealName').textContent=latest?.name||'No active deals';
   document.getElementById('snapDealNote').textContent=latest?.note||'';
 
-  // Notes — keyed by deal name (shared across users in same deal)
-  // Admins see all notes; members see notes for their assigned deals
   document.getElementById('adminNotesWrap').style.display=isAdmin?'block':'none';
 
-  // Build filter buttons for admin based on deal names
-  if(isAdmin){
-    const allDeals=getAllDealNames();
-    const filterBar=document.getElementById('notesFilterBar');
-    filterBar.innerHTML='<button class="fb active" onclick="filterNotes(\'all\',this)">All</button>'+allDeals.map(d=>`<button class="fb" onclick="filterNotes('${d.replace(/'/g,"\\'")}',this)">${esc(d)}</button>`).join('');
-    renderAdminNotes('all');
-  }
-
-  // Member notepad — keyed to their first deal name, or user ID if none
   const noteKey=deals.length?deals[0].name:user.id;
   document.getElementById('notepadGroupLabel').textContent=deals.length?deals[0].name:'Personal';
   renderNotepad(noteKey);
+
+  if(isAdmin)renderAdminNotes('all');
 }
 
-function getAllDealNames(){
-  // Collect all unique deal keys from lvo_notes_* in localStorage
-  const keys=Object.keys(localStorage).filter(k=>k.startsWith('lvo_notes_'));
-  return keys.map(k=>k.replace('lvo_notes_',''));
-}
-
-function getNotes(dealKey){try{return JSON.parse(localStorage.getItem('lvo_notes_'+dealKey)||'[]')}catch(e){return[]}}
-function saveNotes(dealKey,arr){lsSet('lvo_notes_'+dealKey,arr)}
-
-function renderNotepad(dealKey){
-  const notes=getNotes(dealKey);
+/* ── NOTES (Supabase) ── */
+async function renderNotepad(dealKey){
   const el=document.getElementById('noteList');
-  if(!notes.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
-  el.innerHTML=notes.map((n,i)=>`
+  el.innerHTML='<div class="empty">Loading…</div>';
+  try{
+    const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
+    const notes=await res.json();
+    renderNoteList(notes,dealKey);
+  }catch(e){
+    el.innerHTML='<div class="empty">Failed to load notes.</div>';
+  }
+  // Start polling for real-time updates
+  if(_noteChannel)clearInterval(_noteChannel);
+  _noteChannel=setInterval(async()=>{
+    try{
+      const r=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
+      renderNoteList(await r.json(),dealKey);
+    }catch(e){}
+  },8000);
+}
+
+function renderNoteList(notes,dealKey){
+  const el=document.getElementById('noteList');
+  if(!Array.isArray(notes)||!notes.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
+  el.innerHTML=notes.map(n=>`
     <div class="note-item">
       <div class="note-meta" style="display:flex;justify-content:space-between;align-items:center">
-        <div><span class="note-author">${esc(n.name||'Member')}</span> <span class="note-ts">· ${new Date(n.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
-        ${_U?.isAdmin?`<button class="note-del" onclick="deleteNote('${dealKey}',${i})" title="Delete note">✕</button>`:''}
+        <div>
+          <span class="note-author">${esc(n.name||'Member')}</span>
+          <span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
+        </div>
+        ${_U?.isAdmin?`<button class="note-del" onclick="deleteNote('${n.id}')" title="Delete note">✕</button>`:''}
       </div>
       <p class="note-text">${esc(n.text)}</p>
     </div>`).join('');
   el.scrollTop=el.scrollHeight;
 }
 
-function postNote(){
+async function postNote(){
   const text=document.getElementById('noteInput').value.trim();
   if(!text||!_U)return;
   const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
-  const notes=getNotes(dealKey);
-  notes.push({uid:_U.uid,name:_U.name,text,time:new Date().toISOString()});
-  saveNotes(dealKey,notes.slice(-80));
-  document.getElementById('noteInput').value='';
-  renderNotepad(dealKey);
-  if(_U.isAdmin)renderAdminNotes(_currentNotesFilter||'all');
-  logAct(`Posted a note on deal: ${dealKey}`);
+  try{
+    await fetch(`${SB_URL}/rest/v1/lvo_notes`,{
+      method:'POST',
+      headers:{...SB_H,'Prefer':'return=minimal'},
+      body:JSON.stringify({deal_key:dealKey,uid:_U.uid,name:_U.name,author:_U.name,division:_U.division,text})
+    });
+    document.getElementById('noteInput').value='';
+    // Immediately refresh
+    const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
+    renderNoteList(await res.json(),dealKey);
+    if(_U.isAdmin)renderAdminNotes(_currentNotesFilter);
+    logAct(`Posted a note on deal: ${dealKey}`);
+  }catch(e){
+    toast('Failed to post note',true);
+  }
 }
 
-function deleteNote(dealKey,index){
-  const notes=getNotes(dealKey);
-  notes.splice(index,1);
-  saveNotes(dealKey,notes);
-  renderNotepad(dealKey);
-  renderAdminNotes(_currentNotesFilter||'all');
-  toast('Note deleted');
+async function deleteNote(id){
+  try{
+    await fetch(`${SB_URL}/rest/v1/lvo_notes?id=eq.${id}`,{method:'DELETE',headers:SB_H});
+    // Refresh notepad
+    if(_U){
+      const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
+      const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
+      renderNoteList(await res.json(),dealKey);
+    }
+    renderAdminNotes(_currentNotesFilter);
+    toast('Note deleted');
+  }catch(e){
+    toast('Failed to delete note',true);
+  }
 }
 
-function clearAllNotes(){
-  if(!confirm('Delete all organization notes? This cannot be undone.'))return;
-  Object.keys(localStorage).filter(k=>k.startsWith('lvo_notes_')).forEach(k=>localStorage.removeItem(k));
-  renderAdminNotes('all');
-  if(_U)renderNotepad(_U.deals.length?_U.deals[0].name:_U.uid);
-  toast('All notes deleted');
+async function clearAllNotes(){
+  if(!confirm('Delete ALL organization notes? This cannot be undone.'))return;
+  try{
+    await fetch(`${SB_URL}/rest/v1/lvo_notes`,{method:'DELETE',headers:{...SB_H,'Prefer':'return=minimal'}});
+    renderAdminNotes('all');
+    if(_U){
+      const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
+      renderNoteList([],dealKey);
+    }
+    toast('All notes deleted');
+  }catch(e){
+    toast('Failed to delete notes',true);
+  }
 }
 
-let _currentNotesFilter='all';
 function filterNotes(filter,btn){
   _currentNotesFilter=filter;
   document.querySelectorAll('#notesFilterBar .fb').forEach(b=>b.classList.remove('active'));
@@ -841,22 +865,40 @@ function filterNotes(filter,btn){
   renderAdminNotes(filter);
 }
 
-function renderAdminNotes(filter){
+async function renderAdminNotes(filter){
   const el=document.getElementById('adminNotesList');
-  const keys=Object.keys(localStorage).filter(k=>k.startsWith('lvo_notes_'));
-  let all=[];
-  keys.forEach(k=>{const dealKey=k.replace('lvo_notes_','');getNotes(dealKey).forEach(n=>all.push({...n,dealKey}));});
-  all.sort((a,b)=>new Date(b.time)-new Date(a.time));
-  if(filter&&filter!=='all')all=all.filter(n=>n.dealKey===filter);
-  if(!all.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
-  el.innerHTML=all.map((n,i)=>`
-    <div class="note-item">
-      <div class="note-meta" style="display:flex;justify-content:space-between;align-items:center">
-        <div><span class="note-author">${esc(n.name||'Member')}</span><span style="color:var(--purple);opacity:.6;margin-left:.4rem">· ${esc(n.dealKey)}</span><span class="note-ts"> · ${new Date(n.time).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
-        <button class="note-del" onclick="deleteNote('${n.dealKey.replace(/'/g,"\\'")}',${getNotes(n.dealKey).findIndex(x=>x.time===n.time)})" title="Delete">✕</button>
-      </div>
-      <p class="note-text">${esc(n.text)}</p>
-    </div>`).join('');
+  if(!el)return;
+  el.innerHTML='<div class="empty">Loading…</div>';
+  try{
+    let url=`${SB_URL}/rest/v1/lvo_notes?order=created_at.desc`;
+    if(filter&&filter!=='all')url+=`&deal_key=eq.${encodeURIComponent(filter)}`;
+    const res=await fetch(url,{headers:SB_H});
+    const notes=await res.json();
+
+    // Build filter buttons from unique deal_keys
+    const allKeys=[...new Set(notes.map(n=>n.deal_key).filter(Boolean))];
+    const filterBar=document.getElementById('notesFilterBar');
+    if(filterBar){
+      filterBar.innerHTML='<button class="fb'+(filter==='all'?' active':'')+'" onclick="filterNotes(\'all\',this)">All</button>'+
+        allKeys.map(k=>`<button class="fb"${filter===k?' class="fb active"':''} onclick="filterNotes('${k.replace(/'/g,"\\'")}',this)">${esc(k)}</button>`).join('');
+    }
+
+    if(!Array.isArray(notes)||!notes.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
+    el.innerHTML=notes.map(n=>`
+      <div class="note-item">
+        <div class="note-meta" style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <span class="note-author">${esc(n.name||'Member')}</span>
+            <span style="color:var(--purple);opacity:.6;margin-left:.4rem">· ${esc(n.deal_key||'')}</span>
+            <span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
+          </div>
+          <button class="note-del" onclick="deleteNote('${n.id}')" title="Delete">✕</button>
+        </div>
+        <p class="note-text">${esc(n.text)}</p>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML='<div class="empty">Failed to load notes.</div>';
+  }
 }
 
 /* ── LVO CHAT ── */
@@ -971,11 +1013,11 @@ const APPEARANCE={
     formFieldInput:{background:'transparent',border:'.5px solid rgba(127,119,221,.35)',borderRadius:'0',color:'#F0EEEC'},
     formButtonPrimary:{background:'transparent',border:'.5px solid #7F77DD',borderRadius:'0',color:'#7F77DD',fontFamily:"'Cinzel',serif",letterSpacing:'.3em',textTransform:'uppercase',boxShadow:'none'},
     footerActionLink:{color:'#7F77DD'},
-    avatarBox: { border: '.5px solid rgba(127,119,221,.4)', borderRadius: '50%' },
-    userButtonPopoverCard: { background: '#080808', border: '.5px solid rgba(127,119,221,.25)', boxShadow: '0 8px 32px rgba(0,0,0,.8)' },
-    userButtonPopoverActionButton: { color: '#F0EEEC' },
-    userButtonPopoverActionButtonText: { color: '#F0EEEC' },
-    userButtonPopoverFooter: { background: '#080808' }
+    avatarBox:{border:'.5px solid rgba(127,119,221,.4)',borderRadius:'50%'},
+    userButtonPopoverCard:{background:'#080808',border:'.5px solid rgba(127,119,221,.25)',boxShadow:'0 8px 32px rgba(0,0,0,.8)'},
+    userButtonPopoverActionButton:{color:'#F0EEEC'},
+    userButtonPopoverActionButtonText:{color:'#F0EEEC'},
+    userButtonPopoverFooter:{background:'#080808'}
   }
 };
 
@@ -1012,7 +1054,11 @@ window.addEventListener('load',async()=>{
   }
 
   Clerk.addListener(({user})=>{
-    if(!user){_dashboardPopulated=false;_clerkProfileMounted=false;clearInterval(_annTimer);window.location.href='https://wearelvo.com';}
+    if(!user){
+      _dashboardPopulated=false;_clerkProfileMounted=false;
+      clearInterval(_annTimer);clearInterval(_noteChannel);
+      window.location.href='https://wearelvo.com';
+    }
   });
 });
 </script>
