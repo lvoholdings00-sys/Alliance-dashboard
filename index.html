@@ -288,6 +288,10 @@
     #clerkProfileCard{overflow:visible;min-height:200px}
     #clerkProfile{overflow:visible;min-height:180px}
     #clerkProfile > *{display:block}
+    .cl-avatarBox{border-radius:50%!important;overflow:hidden!important}
+    .cl-avatar{border-radius:50%!important}
+    .cl-userButtonAvatarBox{border-radius:50%!important;overflow:hidden!important}
+    .cl-userButtonAvatar{border-radius:50%!important}
 
     @media(max-width:900px){:root{--sidebar:190px}.stat-bar{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.task-grid{grid-template-columns:1fr}}
     @media(max-width:640px){:root{--sidebar:0px}#sidebar{display:none}#main{padding:1.4rem}.stat-bar{grid-template-columns:1fr 1fr}.ig{grid-template-columns:1fr}.task-grid{grid-template-columns:1fr}}
@@ -967,7 +971,7 @@ const APPEARANCE={
     formFieldInput:{background:'transparent',border:'.5px solid rgba(127,119,221,.35)',borderRadius:'0',color:'#F0EEEC'},
     formButtonPrimary:{background:'transparent',border:'.5px solid #7F77DD',borderRadius:'0',color:'#7F77DD',fontFamily:"'Cinzel',serif",letterSpacing:'.3em',textTransform:'uppercase',boxShadow:'none'},
     footerActionLink:{color:'#7F77DD'},
-    avatarBox:{border:'.5px solid rgba(127,119,221,.4)',borderRadius:'0'},
+    avatarBox: { border: '.5px solid rgba(127,119,221,.4)', borderRadius: '50%' },
     userButtonPopoverCard: { background: '#080808', border: '.5px solid rgba(127,119,221,.25)', boxShadow: '0 8px 32px rgba(0,0,0,.8)' },
     userButtonPopoverActionButton: { color: '#F0EEEC' },
     userButtonPopoverActionButtonText: { color: '#F0EEEC' },
