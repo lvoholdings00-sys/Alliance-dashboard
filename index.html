@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LVO Alliance · Dashboard</title>
 
-  <!-- FAVICON — replace with your GitHub raw URL -->
+ 
   <link rel="icon" type="image/png" href="assets/logo.png"/>
   <link rel="apple-touch-icon" href="assets/logo.png"/>
 
@@ -102,11 +103,13 @@
     #bottomNav{
       display:none;
       position:fixed;bottom:0;left:0;right:0;
-      height:var(--bottom-nav);
+      height:calc(var(--bottom-nav) + env(safe-area-inset-bottom));
+      padding-bottom:env(safe-area-inset-bottom);
       background:rgba(0,0,0,.96);
       border-top:.5px solid var(--border);
       z-index:200;
-      padding:0 .3rem;
+      padding-left:.3rem;
+      padding-right:.3rem;
     }
     .bn-inner{
       display:flex;
@@ -346,7 +349,8 @@
       #sidebar{display:none}
       #bottomNav{display:block}
       #main{
-        padding:1.2rem 1rem calc(var(--bottom-nav) + 1rem);
+        padding:1.2rem 1rem calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 1rem);
+          }
         /* full width without sidebar */
       }
       #shell{flex-direction:column}
