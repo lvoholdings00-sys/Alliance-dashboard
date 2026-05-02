@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
   <title>LVO Alliance · Dashboard</title>
 
- 
   <link rel="icon" type="image/png" href="assets/logo.png"/>
   <link rel="apple-touch-icon" href="assets/logo.png"/>
 
@@ -24,6 +22,10 @@
 
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+    /* Prevent iOS input zoom */
+    input,textarea,select{font-size:16px !important}
+
     :root{
       --purple:#7F77DD;--purple-dim:rgba(127,119,221,.18);--purple-hi:rgba(127,119,221,.42);
       --purple-glow:rgba(127,119,221,.06);
@@ -335,7 +337,7 @@
     .cl-avatarBox,.cl-userButtonAvatarBox{border-radius:50%!important;overflow:hidden!important}
     .cl-avatar,.cl-userButtonAvatar{border-radius:50%!important}
 
-    /* ── RESPONSIVE ── */
+    /* ── RESPONSIVE (tablet) ── */
     @media(max-width:900px){
       .stat-bar{grid-template-columns:1fr 1fr}
       .g2{grid-template-columns:1fr}
@@ -348,12 +350,7 @@
       :root{--sidebar:0px}
       #sidebar{display:none}
       #bottomNav{display:block}
-      #main{
-        padding:1.2rem 1rem calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 1rem);
-          }
-        /* full width without sidebar */
-      }
-      #shell{flex-direction:column}
+      #main{padding:1.2rem 1rem calc(var(--bottom-nav) + env(safe-area-inset-bottom) + 1rem)}
       .stat-bar{grid-template-columns:1fr 1fr}
       .ig{grid-template-columns:1fr}
       .task-grid{grid-template-columns:1fr}
@@ -449,7 +446,6 @@
           <div id="ovDeals"><div class="empty">Loading…</div></div>
         </div>
         <div class="card">
-          <!-- FIX: "↺ Refresh" button in header for instant re-fetch -->
           <div class="ch">
             <span class="ct">Announcements</span>
             <div style="display:flex;align-items:center;gap:.8rem">
@@ -700,22 +696,17 @@ function lsSet(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(
 function getMemberMeta(uid){return ls('lvo_members')[uid]||null}
 function setMemberMeta(uid,data){const d=ls('lvo_members');d[uid]=data;lsSet('lvo_members',d)}
 
-/* ── NAVIGATION — syncs both sidebar AND bottom nav ── */
+/* ── NAVIGATION ── */
 function goTo(id){
-  // Sidebar
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.p===id));
-  // Bottom nav
   document.querySelectorAll('.bn-item').forEach(n=>n.classList.toggle('active',n.dataset.p===id));
-  // Panels
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='p-'+id));
-  // Clear badges on visit
   if(id==='announcements'){
     document.getElementById('annBadge').style.display='none';
     document.getElementById('bnAnnDot').classList.remove('show');
   }
   if(id==='deals') document.getElementById('bnDealDot').classList.remove('show');
   if(id==='admin') renderAdminPanel();
-  // Scroll main to top on mobile
   document.getElementById('main').scrollTop=0;
 }
 
@@ -753,7 +744,6 @@ function populateDash(user){
   document.getElementById('tierPageVal').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
   document.getElementById('admBadgeWrap').style.display=isAdmin?'block':'none';
   document.getElementById('adminNav').style.display=isAdmin?'flex':'none';
-  // Show admin in bottom nav too
   const bnAdmin=document.getElementById('bnAdminItem');
   if(bnAdmin)bnAdmin.style.display=isAdmin?'flex':'none';
   const tn=document.getElementById('tierNote');if(tn)tn.style.display=(!isAdmin&&tier>=3)?'block':'none';
@@ -820,11 +810,7 @@ function renderFin(deals,tier,isAdmin){
   </tr>`}).join('');
 }
 
-/* ── ANNOUNCEMENTS ──
-   FIX: renderOvAnn now shows ONLY body (not repeating the title).
-   Title is shown as bold header, body as the preview text.
-   This prevents the "title = body" visual duplication.
-── */
+/* ── ANNOUNCEMENTS ── */
 async function fetchAnn(manual=false){
   _annSec=900;
   try{
@@ -853,16 +839,14 @@ async function fetchAnn(manual=false){
 
 function renderOvAnn(){
   const el=document.getElementById('ovAnn');
-  // Filter to Alliance/All announcements only
   const items=_ann.filter(a=>a.division==='Alliance'||a.division==='All').slice(0,3);
   if(!items.length){el.innerHTML='<div class="empty">No announcements yet.</div>';return;}
   el.innerHTML=items.map(a=>{
-    // FIX: show title as header, body as the actual preview text (not duplicated)
     const previewBody=(a.body||'').slice(0,100)+(a.body||'').length>100?'…':'';
     return`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">
       <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
         ${a.pinned?'<span class="ann-pin-badge">★</span>':''}
-        <div style="font-family:\'Cinzel\',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
+        <div style="font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
       </div>
       ${previewBody?`<div style="font-size:.8rem;font-style:italic;color:var(--dim2);line-height:1.5">${esc(previewBody)}</div>`:''}
     </div>`;
