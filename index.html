@@ -499,7 +499,7 @@
 
     <!-- ANNOUNCEMENTS -->
     <div class="panel" id="p-announcements">
-      <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Communications</div><div class="ph-title">Announcements</div><div class="ph-sub">Posted from Discord. Refreshes every 15 minutes.</div></div><div class="ph-rule"></div><div class="btn-row"><button class="btn sm ghost" onclick="fetchAnn(true)">↺ Refresh</button></div></div>
+      <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Communications</div><div class="ph-title">Announcements</div><div class="ph-sub">Posted from LVO. Refreshes every 15 minutes.</div></div><div class="ph-rule"></div><div class="btn-row"><button class="btn sm ghost" onclick="fetchAnn(true)">↺ Refresh</button></div></div>
       <div class="fbar">
         <button class="fb active" onclick="filterAnn('all',this)">All</button>
         <button class="fb" onclick="filterAnn('pinned',this)">Pinned</button>
@@ -701,7 +701,7 @@ async function fetchAnn(manual=false){
     _ann=await res.json();
     renderAnnList();renderOvAnn();
     if(_ann.filter(a=>a.pinned).length)document.getElementById('annBadge').style.display='block';
-    setSbStatus(true,'Supabase OK');
+    setSbStatus(true,'Database Online|15 Min Timer');
     const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
     document.getElementById('ovAnnTime').textContent=`Updated ${t}`;
     if(manual)toast('Announcements refreshed');
