@@ -4,17 +4,22 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>LVO Alliance · Dashboard</title>
+
+  <!-- FAVICON — replace with your GitHub raw URL -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/logo.png"/>
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/logo.png"/>
+
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cormorant+SC:wght@300;400;500&display=swap" rel="stylesheet"/>
 
-<script
-  async
-  crossorigin="anonymous"
-  data-clerk-publishable-key="pk_live_Y2xlcmsuYWxsaWFuY2Uud2VhcmVsdm8uY29tJA"
-  src="https://clerk.alliance.wearelvo.com/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-  type="text/javascript"
-></script>
+  <script
+    async
+    crossorigin="anonymous"
+    data-clerk-publishable-key="pk_live_Y2xlcmsuYWxsaWFuY2Uud2VhcmVsdm8uY29tJA"
+    src="https://clerk.alliance.wearelvo.com/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+    type="text/javascript"
+  ></script>
 
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -27,6 +32,7 @@
       --chrome:#C8C8D0;--white:#F0EEEC;--dim:#6A6A64;--dim2:#888880;
       --border:rgba(127,119,221,.14);--border-hi:rgba(127,119,221,.38);
       --sidebar:220px;
+      --bottom-nav:56px;
     }
     html,body{height:100%;overflow:hidden}
     body{background:var(--bg);color:var(--white);font-family:'Cormorant Garamond',Georgia,serif;display:flex;flex-direction:column}
@@ -67,7 +73,7 @@
     /* SHELL */
     #shell{flex:1;display:flex;overflow:hidden;position:relative;z-index:1}
 
-    /* SIDEBAR */
+    /* SIDEBAR — desktop only */
     #sidebar{width:var(--sidebar);flex-shrink:0;display:flex;flex-direction:column;background:var(--bg2);border-right:.5px solid var(--border);overflow-y:auto}
     #sidebar::-webkit-scrollbar{width:2px}
     #sidebar::-webkit-scrollbar-thumb{background:var(--border)}
@@ -91,6 +97,41 @@
     .pip-txt{font-family:'Cinzel',serif;font-size:.34rem;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
     .sb-status{font-family:'Cinzel',serif;font-size:.34rem;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;padding:.3rem 0;display:flex;align-items:center;gap:.4rem}
     .sb-status.ok{color:var(--purple)}.sb-status.err{color:var(--red-hi)}
+
+    /* ── MOBILE BOTTOM NAV ── */
+    #bottomNav{
+      display:none;
+      position:fixed;bottom:0;left:0;right:0;
+      height:var(--bottom-nav);
+      background:rgba(0,0,0,.96);
+      border-top:.5px solid var(--border);
+      z-index:200;
+      padding:0 .3rem;
+    }
+    .bn-inner{
+      display:flex;
+      align-items:stretch;
+      height:100%;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      gap:0;
+    }
+    .bn-inner::-webkit-scrollbar{display:none}
+    .bn-item{
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:.18rem;padding:.4rem .55rem;cursor:pointer;
+      min-width:52px;flex-shrink:0;
+      border-top:2px solid transparent;
+      transition:all .18s;
+      position:relative;
+    }
+    .bn-item.active{border-top-color:var(--purple)}
+    .bn-item.active .bn-ico{opacity:1;color:var(--purple)}
+    .bn-item.active .bn-lbl{color:var(--purple)}
+    .bn-ico{font-size:.72rem;opacity:.38;transition:all .18s;color:var(--chrome)}
+    .bn-lbl{font-family:'Cinzel',serif;font-size:.3rem;letter-spacing:.18em;color:var(--dim2);text-transform:uppercase;white-space:nowrap;transition:color .18s}
+    .bn-dot{position:absolute;top:.35rem;right:.35rem;width:5px;height:5px;border-radius:50%;background:var(--purple);display:none}
+    .bn-dot.show{display:block}
 
     /* MAIN */
     #main{flex:1;overflow-y:auto;padding:2.2rem 2.4rem 3rem;background:var(--bg)}
@@ -119,7 +160,7 @@
 
     .card{background:var(--bg2);border:.5px solid var(--border);position:relative}
     .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--purple),transparent)}
-    .ch{padding:1rem 1.4rem;border-bottom:.5px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .ch{padding:1rem 1.4rem;border-bottom:.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
     .ct{font-family:'Cinzel',serif;font-size:.44rem;letter-spacing:.35em;color:var(--purple);text-transform:uppercase}
     .cm{font-family:'Cinzel',serif;font-size:.36rem;letter-spacing:.2em;color:var(--dim);text-transform:uppercase}
     .cb{padding:1.2rem 1.4rem}
@@ -130,13 +171,13 @@
     .deal:last-child{border-bottom:none}
     .deal::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--purple);opacity:0;transition:opacity .2s;pointer-events:none}
     .deal:hover{background:var(--purple-glow)}.deal:hover::before{opacity:1}
-    .deal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;gap:.8rem}
+    .deal-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;gap:.8rem;flex-wrap:wrap}
     .deal-name{font-family:'Cinzel',serif;font-size:.62rem;font-weight:600;letter-spacing:.14em;color:var(--chrome)}
     .deal-st{font-family:'Cinzel',serif;font-size:.34rem;letter-spacing:.18em;padding:.18rem .5rem;text-transform:uppercase}
     .deal-st.active{color:#22c55e;border:.5px solid rgba(34,197,94,.28);background:rgba(34,197,94,.05)}
     .deal-st.pending{color:var(--gold);border:.5px solid rgba(200,169,110,.28);background:rgba(200,169,110,.05)}
     .deal-st.closed{color:var(--dim);border:.5px solid rgba(100,100,95,.2)}
-    .deal-meta{display:flex;gap:1.8rem;flex-wrap:wrap}
+    .deal-meta{display:flex;gap:1.4rem;flex-wrap:wrap}
     .dm-lbl{font-family:'Cinzel',serif;font-size:.33rem;letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-bottom:.15rem}
     .dm-val{font-size:.82rem;font-style:italic;color:var(--chrome)}
     .deal-note{margin-top:.6rem;font-size:.8rem;font-style:italic;color:var(--dim2);line-height:1.6;border-top:.5px solid var(--border);padding-top:.55rem}
@@ -158,7 +199,7 @@
     .ann:last-child{border-bottom:none}
     .ann:hover{background:var(--purple-glow)}
     .ann.pinned{border-left:2px solid var(--purple);background:rgba(127,119,221,.03)}
-    .ann-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.55rem;gap:1rem}
+    .ann-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.55rem;gap:1rem;flex-wrap:wrap}
     .ann-title{font-family:'Cinzel',serif;font-size:.6rem;font-weight:600;letter-spacing:.12em;color:var(--chrome)}
     .ann-div{font-family:'Cinzel',serif;font-size:.33rem;letter-spacing:.2em;color:var(--purple);border:.5px solid var(--border);padding:.15rem .45rem;flex-shrink:0;text-transform:uppercase}
     .ann-body{font-size:.88rem;font-style:italic;color:var(--dim2);line-height:1.75}
@@ -214,7 +255,7 @@
     .snap-sub{font-size:.78rem;font-style:italic;color:var(--dim);margin-top:.15rem}
 
     /* CHAT */
-    .chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;min-height:200px;max-height:320px;margin-bottom:.8rem}
+    .chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:.7rem;min-height:180px;max-height:300px;margin-bottom:.8rem}
     .chat-messages::-webkit-scrollbar{width:2px}
     .chat-messages::-webkit-scrollbar-thumb{background:var(--border)}
     .chat-msg{display:flex;flex-direction:column;gap:.18rem}
@@ -279,7 +320,7 @@
     .btn:disabled{opacity:.38;cursor:not-allowed}
     .btn-row{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
 
-    #toasts{position:fixed;bottom:1.5rem;right:1.5rem;z-index:400;display:flex;flex-direction:column;gap:.4rem}
+    #toasts{position:fixed;bottom:calc(var(--bottom-nav) + .8rem);right:1rem;z-index:400;display:flex;flex-direction:column;gap:.4rem}
     .tst{font-family:'Cinzel',serif;font-size:.4rem;letter-spacing:.2em;padding:.65rem 1rem;border:.5px solid var(--border-hi);background:var(--bg2);color:var(--purple);text-transform:uppercase;animation:tstIn .25s ease}
     .tst.err{color:var(--red-hi);border-color:rgba(204,32,32,.3)}
     @keyframes tstIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
@@ -288,13 +329,39 @@
     #clerkProfileCard{overflow:visible;min-height:200px}
     #clerkProfile{overflow:visible;min-height:180px}
     #clerkProfile > *{display:block}
-    .cl-avatarBox{border-radius:50%!important;overflow:hidden!important}
-    .cl-avatar{border-radius:50%!important}
-    .cl-userButtonAvatarBox{border-radius:50%!important;overflow:hidden!important}
-    .cl-userButtonAvatar{border-radius:50%!important}
+    .cl-avatarBox,.cl-userButtonAvatarBox{border-radius:50%!important;overflow:hidden!important}
+    .cl-avatar,.cl-userButtonAvatar{border-radius:50%!important}
 
-    @media(max-width:900px){:root{--sidebar:190px}.stat-bar{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}.task-grid{grid-template-columns:1fr}}
-    @media(max-width:640px){:root{--sidebar:0px}#sidebar{display:none}#main{padding:1.4rem}.stat-bar{grid-template-columns:1fr 1fr}.ig{grid-template-columns:1fr}.task-grid{grid-template-columns:1fr}}
+    /* ── RESPONSIVE ── */
+    @media(max-width:900px){
+      .stat-bar{grid-template-columns:1fr 1fr}
+      .g2{grid-template-columns:1fr}
+      .task-grid{grid-template-columns:1fr}
+      .fin-grid{grid-template-columns:1fr 1fr}
+    }
+
+    /* ── MOBILE ── */
+    @media(max-width:640px){
+      :root{--sidebar:0px}
+      #sidebar{display:none}
+      #bottomNav{display:block}
+      #main{
+        padding:1.2rem 1rem calc(var(--bottom-nav) + 1rem);
+        /* full width without sidebar */
+      }
+      #shell{flex-direction:column}
+      .stat-bar{grid-template-columns:1fr 1fr}
+      .ig{grid-template-columns:1fr}
+      .task-grid{grid-template-columns:1fr}
+      .fin-grid{grid-template-columns:1fr}
+      .ft{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+      .ph-left .ph-title{font-size:1.15rem}
+      .adm-row{grid-template-columns:1fr;gap:.4rem}
+      .tb-crumb{display:none}
+      .tb-tier{display:none}
+      #toasts{bottom:calc(var(--bottom-nav) + .5rem);right:.5rem;left:.5rem}
+      .tst{font-size:.38rem;padding:.55rem .8rem}
+    }
   </style>
 </head>
 <body>
@@ -331,6 +398,7 @@
 </div>
 
 <div id="shell" style="display:none">
+  <!-- DESKTOP SIDEBAR -->
   <nav id="sidebar">
     <div class="sb-section">
       <div class="sb-label">Navigation</div>
@@ -377,7 +445,14 @@
           <div id="ovDeals"><div class="empty">Loading…</div></div>
         </div>
         <div class="card">
-          <div class="ch"><span class="ct">Announcements</span><span class="cm" id="ovAnnTime">—</span></div>
+          <!-- FIX: "↺ Refresh" button in header for instant re-fetch -->
+          <div class="ch">
+            <span class="ct">Announcements</span>
+            <div style="display:flex;align-items:center;gap:.8rem">
+              <span class="cm" id="ovAnnTime">—</span>
+              <button class="btn sm ghost" style="padding:.3rem .65rem;font-size:.34rem" onclick="fetchAnn(true)">↺</button>
+            </div>
+          </div>
           <div id="ovAnn"><div class="empty">Loading…</div></div>
         </div>
       </div>
@@ -404,7 +479,7 @@
           <div class="fgc"><div class="fg-lbl">Equity Positions</div><div class="fg-val" id="finEq">—</div></div>
           <div class="fgc"><div class="fg-lbl">Active Deals</div><div class="fg-val" id="finDls">—</div></div>
         </div>
-        <div class="card">
+        <div class="card" style="overflow-x:auto">
           <div class="ch"><span class="ct">Deal Positions</span><span class="cm" id="finMonth">—</span></div>
           <table class="ft"><thead><tr><th>Deal</th><th>Position</th><th>Division</th><th>Status</th><th>Capital</th></tr></thead>
           <tbody id="finTbody"><tr><td colspan="5"><div class="empty">Loading…</div></td></tr></tbody></table>
@@ -415,11 +490,11 @@
     <!-- TIERS -->
     <div class="panel" id="p-tiers">
       <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Partnership Structure</div><div class="ph-title">Tiers</div><div class="ph-sub">Your current standing and the Alliance hierarchy.</div></div><div class="ph-rule"></div></div>
-      <div class="card g-full" id="myTierCard" style="margin-bottom:1.2rem">
+      <div class="card g-full" style="margin-bottom:1.2rem">
         <div class="ch"><span class="ct">Your Standing</span></div>
         <div class="cb">
           <div style="margin-bottom:.6rem"><div style="font-family:'Cinzel',serif;font-size:.38rem;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:.4rem">Current Tier</div><div style="font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.18em;color:var(--purple)" id="tierPageVal">—</div></div>
-          <p style="font-size:.88rem;font-style:italic;color:var(--dim2);line-height:1.7">Tier advancement is reviewed and updated directly by LVO Holdings administration based on your involvement, capital contribution, and performance.</p>
+          <p style="font-size:.88rem;font-style:italic;color:var(--dim2);line-height:1.7">Tier advancement is reviewed and updated directly by LVO Holdings administration.</p>
         </div>
       </div>
       <div class="card g-full">
@@ -454,7 +529,6 @@
         </div>
         <div class="task-grid">
           <div style="display:flex;flex-direction:column;gap:1.2rem">
-            <!-- NOTEPAD -->
             <div class="task-panel">
               <div class="tp-head"><span class="tp-title">Deal Notepad</span><span class="tp-sub" id="notepadGroupLabel">—</span></div>
               <div class="tp-body">
@@ -465,7 +539,6 @@
                 </div>
               </div>
             </div>
-            <!-- FINANCE SNAP -->
             <div class="task-panel">
               <div class="tp-head"><span class="tp-title">Finance Snapshot</span><span class="tp-sub">Your Account</span></div>
               <div class="tp-body" style="padding:0">
@@ -479,8 +552,7 @@
               </div>
             </div>
           </div>
-          <!-- CHAT — powered by The Shadow via Cloudflare Worker -->
-          <div class="task-panel" style="min-height:520px">
+          <div class="task-panel" style="min-height:460px">
             <div class="tp-head"><span class="tp-title">The LVO</span><span class="tp-sub">AI Assistant</span></div>
             <div class="tp-body">
               <div class="chat-messages" id="chatMessages">
@@ -499,7 +571,11 @@
 
     <!-- ANNOUNCEMENTS -->
     <div class="panel" id="p-announcements">
-      <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Communications</div><div class="ph-title">Announcements</div><div class="ph-sub">Posted from LVO. Refreshes every 15 minutes.</div></div><div class="ph-rule"></div><div class="btn-row"><button class="btn sm ghost" onclick="fetchAnn(true)">↺ Refresh</button></div></div>
+      <div class="ph">
+        <div class="ph-left"><div class="ph-eyebrow">Communications</div><div class="ph-title">Announcements</div><div class="ph-sub">Posted from LVO. Refreshes every 15 minutes.</div></div>
+        <div class="ph-rule"></div>
+        <div class="btn-row"><button class="btn sm ghost" onclick="fetchAnn(true)">↺ Refresh</button></div>
+      </div>
       <div class="fbar">
         <button class="fb active" onclick="filterAnn('all',this)">All</button>
         <button class="fb" onclick="filterAnn('pinned',this)">Pinned</button>
@@ -540,10 +616,10 @@
         <div class="sc"><div class="sc-lbl">Version</div><div class="sc-val">2.1 · 2026</div></div>
       </div>
       <div class="card" style="margin-bottom:1.2rem">
-        <div class="ch"><span class="ct">Member Tier Management</span><span class="cm">Save updates tier in localStorage</span></div>
+        <div class="ch"><span class="ct">Member Tier Management</span></div>
         <div class="cb">
           <div style="margin-bottom:1rem;display:flex;gap:.8rem;flex-wrap:wrap;align-items:center">
-            <input id="memberSearch" placeholder="Search by name or email…" style="max-width:280px;background:transparent;border:.5px solid var(--border);color:var(--white);font-family:'Cormorant Garamond',serif;font-size:.9rem;padding:.7rem .9rem;outline:none" oninput="filterMembers()"/>
+            <input id="memberSearch" placeholder="Search by name or email…" style="max-width:280px;background:transparent;border:.5px solid var(--border);color:var(--white);font-family:'Cormorant Garamond',serif;font-size:.9rem;padding:.7rem .9rem;outline:none;width:100%" oninput="filterMembers()"/>
             <span style="font-family:'Cinzel',serif;font-size:.34rem;letter-spacing:.2em;color:var(--dim);text-transform:uppercase" id="memberCount"></span>
           </div>
           <div id="admList"><div class="empty">Loading members…</div></div>
@@ -558,6 +634,38 @@
   </main>
 </div>
 
+<!-- MOBILE BOTTOM NAV -->
+<div id="bottomNav">
+  <div class="bn-inner">
+    <div class="bn-item active" data-p="overview" onclick="goTo('overview')">
+      <span class="bn-ico">◈</span><span class="bn-lbl">Overview</span>
+    </div>
+    <div class="bn-item" data-p="deals" onclick="goTo('deals')">
+      <span class="bn-ico">◇</span><span class="bn-lbl">Deals</span>
+      <span class="bn-dot" id="bnDealDot"></span>
+    </div>
+    <div class="bn-item" data-p="financials" onclick="goTo('financials')">
+      <span class="bn-ico">◉</span><span class="bn-lbl">Financials</span>
+    </div>
+    <div class="bn-item" data-p="tiers" onclick="goTo('tiers')">
+      <span class="bn-ico">△</span><span class="bn-lbl">Tiers</span>
+    </div>
+    <div class="bn-item" data-p="tasklog" onclick="goTo('tasklog')">
+      <span class="bn-ico">▦</span><span class="bn-lbl">Tasks</span>
+    </div>
+    <div class="bn-item" data-p="announcements" onclick="goTo('announcements')">
+      <span class="bn-ico">▣</span><span class="bn-lbl">News</span>
+      <span class="bn-dot" id="bnAnnDot"></span>
+    </div>
+    <div class="bn-item" data-p="account" onclick="goTo('account')">
+      <span class="bn-ico">◎</span><span class="bn-lbl">Account</span>
+    </div>
+    <div class="bn-item" id="bnAdminItem" data-p="admin" onclick="goTo('admin')" style="display:none">
+      <span class="bn-ico">⬡</span><span class="bn-lbl">Admin</span>
+    </div>
+  </div>
+</div>
+
 <div id="toasts"></div>
 
 <script>
@@ -566,8 +674,6 @@ const SB_URL='https://pumteihkiaftgwbexaid.supabase.co';
 const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB1bXRlaWhraWFmdGd3YmV4YWlkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc1NjAyMjYsImV4cCI6MjA5MzEzNjIyNn0.6JqNyNH_BBs-CsvAT41L_7Ku8G4CN_ymb9fXVYJEvf4';
 const SB_H={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
 const TIER_LABELS={1:'Tier I — Principal',2:'Tier II — Associate',3:'Tier III — Partner',4:'Tier IV — Member'};
-
-/* ── The Shadow / LVO chat config ── */
 const SHADOW_WORKER='https://shadow-lvo.lvoholdings00.workers.dev';
 const SHADOW_MODEL='llama-3.3-70b-versatile';
 
@@ -584,18 +690,29 @@ function showError(msg,detail=''){document.getElementById('loadScreen').classLis
 function setSbStatus(ok,msg){const el=document.getElementById('sbStatus');el.className='sb-status '+(ok?'ok':'err');el.textContent=(ok?'● ':'○ ')+msg}
 function logAct(action,isAdmin=false){_activity.unshift({action,isAdmin,time:new Date().toISOString()});_activity=_activity.slice(0,50);renderAct()}
 
-/* ── localStorage helpers ── */
+/* ── localStorage ── */
 function ls(key,fb='{}'){try{return JSON.parse(localStorage.getItem(key)||fb)}catch(e){return JSON.parse(fb)}}
 function lsSet(key,val){try{localStorage.setItem(key,JSON.stringify(val))}catch(e){}}
 function getMemberMeta(uid){return ls('lvo_members')[uid]||null}
 function setMemberMeta(uid,data){const d=ls('lvo_members');d[uid]=data;lsSet('lvo_members',d)}
 
-/* ── NAVIGATION ── */
+/* ── NAVIGATION — syncs both sidebar AND bottom nav ── */
 function goTo(id){
+  // Sidebar
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.p===id));
+  // Bottom nav
+  document.querySelectorAll('.bn-item').forEach(n=>n.classList.toggle('active',n.dataset.p===id));
+  // Panels
   document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='p-'+id));
-  if(id==='announcements')document.getElementById('annBadge').style.display='none';
-  if(id==='admin')renderAdminPanel();
+  // Clear badges on visit
+  if(id==='announcements'){
+    document.getElementById('annBadge').style.display='none';
+    document.getElementById('bnAnnDot').classList.remove('show');
+  }
+  if(id==='deals') document.getElementById('bnDealDot').classList.remove('show');
+  if(id==='admin') renderAdminPanel();
+  // Scroll main to top on mobile
+  document.getElementById('main').scrollTop=0;
 }
 
 /* ── POPULATE ── */
@@ -612,7 +729,7 @@ function populateDash(user){
   const deals=Array.isArray(meta.active_deals)?meta.active_deals:[];
 
   if(!getMemberMeta(user.id)){
-    setMemberMeta(user.id,{name,email,tier:tier,division,role,onboarded:!!lsMeta.onboarded,joinedRaw:user.createdAt});
+    setMemberMeta(user.id,{name,email,tier,division,role,onboarded:true,joinedRaw:user.createdAt});
   }
 
   _U={uid:user.id,name,email,isAdmin,tier,division,role,joined,deals};
@@ -632,6 +749,9 @@ function populateDash(user){
   document.getElementById('tierPageVal').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
   document.getElementById('admBadgeWrap').style.display=isAdmin?'block':'none';
   document.getElementById('adminNav').style.display=isAdmin?'flex':'none';
+  // Show admin in bottom nav too
+  const bnAdmin=document.getElementById('bnAdminItem');
+  if(bnAdmin)bnAdmin.style.display=isAdmin?'flex':'none';
   const tn=document.getElementById('tierNote');if(tn)tn.style.display=(!isAdmin&&tier>=3)?'block':'none';
   const amt=document.getElementById('admMyTier');if(amt)amt.textContent=TIER_LABELS[tier]||TIER_LABELS[4];
   document.getElementById('finMonth').textContent=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
@@ -661,11 +781,15 @@ function renderDeals(deals,tier,isAdmin){
   const canSee=isAdmin||tier<=3;
   document.getElementById('sDeals').textContent=canSee?deals.length:'—';
   document.getElementById('ovDealCount').textContent=canSee?`${deals.length} deal${deals.length!==1?'s':''}`:'Restricted';
-  if(deals.length&&canSee){const b=document.getElementById('dealsBadge');b.style.display='block';b.textContent=deals.length;}
+  if(deals.length&&canSee){
+    document.getElementById('dealsBadge').style.display='block';
+    document.getElementById('dealsBadge').textContent=deals.length;
+    document.getElementById('bnDealDot').classList.add('show');
+  }
   const ovEl=document.getElementById('ovDeals');
   if(!canSee){ovEl.innerHTML='<div class="empty">Unlocked at Tier III+</div>';document.getElementById('dealsLocked').style.display='block';document.getElementById('dealsContent').innerHTML='';return;}
   document.getElementById('dealsLocked').style.display='none';
-  if(!deals.length){ovEl.innerHTML='<div class="empty">No deals assigned.</div>';document.getElementById('dealsContent').innerHTML='<div class="empty" style="padding:1.5rem">No deals assigned to your account yet.</div>';return;}
+  if(!deals.length){ovEl.innerHTML='<div class="empty">No deals assigned.</div>';document.getElementById('dealsContent').innerHTML='<div class="empty" style="padding:1.5rem">No deals assigned yet.</div>';return;}
   ovEl.innerHTML=deals.slice(0,2).map(d=>dealHTML(d,isAdmin,tier)).join('');
   document.getElementById('dealsContent').innerHTML=`<div class="card">${deals.map(d=>dealHTML(d,isAdmin,tier)).join('')}</div>`;
 }
@@ -677,7 +801,7 @@ function renderFin(deals,tier,isAdmin){
   document.getElementById('finContent').style.display=canSee?'block':'none';
   if(!canSee)return;
   const showCap=isAdmin||tier<=1;
-  let total=0;deals.forEach(d=>{if(!d.capital)return;const n=parseFloat(String(d.capital).replace(/[$,\s]/g,''));if(!isNaN(n))total+=n;});
+  let total=0;deals.forEach(d=>{if(!d.capital)return;const n=parseFloat(String(d.capital).replace(/[$,\s~]/g,''));if(!isNaN(n))total+=n;});
   document.getElementById('finCap').textContent=showCap?(total?'$'+total.toLocaleString('en-US'):'—'):'Restricted';
   document.getElementById('finEq').textContent=deals.length||'—';
   document.getElementById('finDls').textContent=deals.filter(d=>(d.status||'').toLowerCase()==='active').length||deals.length||'—';
@@ -692,33 +816,53 @@ function renderFin(deals,tier,isAdmin){
   </tr>`}).join('');
 }
 
-/* ── ANNOUNCEMENTS ── */
+/* ── ANNOUNCEMENTS ──
+   FIX: renderOvAnn now shows ONLY body (not repeating the title).
+   Title is shown as bold header, body as the preview text.
+   This prevents the "title = body" visual duplication.
+── */
 async function fetchAnn(manual=false){
   _annSec=900;
   try{
     const res=await fetch(`${SB_URL}/rest/v1/lvo_announcements?select=*&order=pinned.desc,created_at.desc`,{headers:SB_H});
     if(!res.ok){const txt=await res.text();throw new Error(`${res.status}: ${txt}`);}
     _ann=await res.json();
-    renderAnnList();renderOvAnn();
-    if(_ann.filter(a=>a.pinned).length)document.getElementById('annBadge').style.display='block';
-    setSbStatus(true,'Database Online|15 Min Timer');
+    renderAnnList();
+    renderOvAnn();
+    const pinned=_ann.filter(a=>a.pinned&&(a.division==='Alliance'||a.division==='All'));
+    if(pinned.length){
+      document.getElementById('annBadge').style.display='block';
+      document.getElementById('bnAnnDot').classList.add('show');
+    }
+    setSbStatus(true,'Database Online · 15 Min Timer');
     const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
     document.getElementById('ovAnnTime').textContent=`Updated ${t}`;
     if(manual)toast('Announcements refreshed');
   }catch(e){
     console.error(e);setSbStatus(false,'Supabase error');
     if(e.message?.includes('42P01')||e.message?.includes('404')){
-      document.getElementById('annList').innerHTML='<div class="empty" style="padding:2rem">Table <code style="color:var(--chrome)">lvo_announcements</code> not found in Supabase.</div>';
-      document.getElementById('ovAnn').innerHTML='<div class="empty">Table not set up yet.</div>';
+      document.getElementById('annList').innerHTML='<div class="empty" style="padding:2rem">Table not found in Supabase.</div>';
+      document.getElementById('ovAnn').innerHTML='<div class="empty">Table not set up.</div>';
     }else if(manual)toast('Refresh failed',true);
   }
 }
 
 function renderOvAnn(){
   const el=document.getElementById('ovAnn');
+  // Filter to Alliance/All announcements only
   const items=_ann.filter(a=>a.division==='Alliance'||a.division==='All').slice(0,3);
   if(!items.length){el.innerHTML='<div class="empty">No announcements yet.</div>';return;}
-  el.innerHTML=items.map(a=>`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">${a.pinned?'<span class="ann-pin-badge">★ </span>':''}<div style="font-family:\'Cinzel\',serif;font-size:.54rem;letter-spacing:.1em;color:var(--chrome);margin-bottom:.25rem">${esc(a.title||'')}</div><div style="font-size:.8rem;font-style:italic;color:var(--dim2)">${esc((a.body||'').slice(0,90))}${(a.body||'').length>90?'…':''}</div></div>`).join('');
+  el.innerHTML=items.map(a=>{
+    // FIX: show title as header, body as the actual preview text (not duplicated)
+    const previewBody=(a.body||'').slice(0,100)+(a.body||'').length>100?'…':'';
+    return`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
+        ${a.pinned?'<span class="ann-pin-badge">★</span>':''}
+        <div style="font-family:\'Cinzel\',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
+      </div>
+      ${previewBody?`<div style="font-size:.8rem;font-style:italic;color:var(--dim2);line-height:1.5">${esc(previewBody)}</div>`:''}
+    </div>`;
+  }).join('');
   const last=el.querySelector('div:last-child');if(last)last.style.borderBottom='none';
 }
 
@@ -726,17 +870,32 @@ function renderAnnList(){
   const el=document.getElementById('annList');
   let data=[..._ann];
   if(_annFilter==='pinned')data=data.filter(a=>a.pinned&&(a.division==='Alliance'||a.division==='All'));
-  if(_annFilter==='all')data=data.filter(a=>a.division==='All'||a.division==='Alliance');
-  if(_annFilter==='div')data=data.filter(a=>a.division==='Alliance');
+  else if(_annFilter==='all')data=data.filter(a=>a.division==='All'||a.division==='Alliance');
+  else if(_annFilter==='div')data=data.filter(a=>a.division==='Alliance');
   if(!data.length){el.innerHTML='<div class="empty" style="padding:1.5rem">No announcements found.</div>';return;}
-  el.innerHTML=data.map(a=>`<div class="ann${a.pinned?' pinned':''}"><div class="ann-hd"><div>${a.pinned?'<span class="ann-pin-badge">★ Pinned · </span>':''}<span class="ann-title">${esc(a.title||'')}</span></div><span class="ann-div">${esc(a.division||'All')}</span></div><div class="ann-body">${esc(a.body||'')}</div><div class="ann-ft"><span class="ann-author">${esc(a.author||'LVO Administration')}</span><span class="ann-time">${new Date(a.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span></div></div>`).join('');
+  el.innerHTML=data.map(a=>`<div class="ann${a.pinned?' pinned':''}">
+    <div class="ann-hd">
+      <div>${a.pinned?'<span class="ann-pin-badge">★ Pinned · </span>':''}<span class="ann-title">${esc(a.title||'')}</span></div>
+      <span class="ann-div">${esc(a.division||'All')}</span>
+    </div>
+    <div class="ann-body">${esc(a.body||'')}</div>
+    <div class="ann-ft">
+      <span class="ann-author">${esc(a.author||'LVO Administration')}</span>
+      <span class="ann-time">${new Date(a.created_at).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</span>
+    </div>
+  </div>`).join('');
 }
 
 function filterAnn(type,btn){_annFilter=type;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAnnList()}
 
 function startCountdown(){
   clearInterval(_annTimer);
-  _annTimer=setInterval(()=>{_annSec--;const m=Math.floor(_annSec/60),s=_annSec%60;document.getElementById('refreshLabel').textContent=`${m}:${String(s).padStart(2,'0')}`;if(_annSec<=0)fetchAnn();},1000);
+  _annTimer=setInterval(()=>{
+    _annSec--;
+    const m=Math.floor(_annSec/60),s=_annSec%60;
+    document.getElementById('refreshLabel').textContent=`${m}:${String(s).padStart(2,'0')}`;
+    if(_annSec<=0)fetchAnn();
+  },1000);
 }
 
 /* ── ACTIVITY ── */
@@ -753,7 +912,6 @@ function initTaskLog(user,tier,isAdmin,deals){
   document.getElementById('taskLocked').style.display=canAccess?'none':'block';
   document.getElementById('taskContent').style.display=canAccess?'block':'none';
   if(!canAccess)return;
-
   const latest=deals[0]||null;
   const lsMeta=getMemberMeta(user.id)||{};
   document.getElementById('snapDeals').textContent=deals.length||'0';
@@ -762,13 +920,10 @@ function initTaskLog(user,tier,isAdmin,deals){
   document.getElementById('snapTier').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
   document.getElementById('snapDealName').textContent=latest?.name||'No active deals';
   document.getElementById('snapDealNote').textContent=latest?.note||'';
-
   document.getElementById('adminNotesWrap').style.display=isAdmin?'block':'none';
-
   const noteKey=deals.length?deals[0].name:user.id;
   document.getElementById('notepadGroupLabel').textContent=deals.length?deals[0].name:'Personal';
   renderNotepad(noteKey);
-
   if(isAdmin)renderAdminNotes('all');
 }
 
@@ -778,17 +933,11 @@ async function renderNotepad(dealKey){
   el.innerHTML='<div class="empty">Loading…</div>';
   try{
     const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
-    const notes=await res.json();
-    renderNoteList(notes,dealKey);
-  }catch(e){
-    el.innerHTML='<div class="empty">Failed to load notes.</div>';
-  }
+    renderNoteList(await res.json(),dealKey);
+  }catch(e){el.innerHTML='<div class="empty">Failed to load notes.</div>';}
   if(_noteChannel)clearInterval(_noteChannel);
   _noteChannel=setInterval(async()=>{
-    try{
-      const r=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
-      renderNoteList(await r.json(),dealKey);
-    }catch(e){}
+    try{const r=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});renderNoteList(await r.json(),dealKey);}catch(e){}
   },8000);
 }
 
@@ -798,11 +947,8 @@ function renderNoteList(notes,dealKey){
   el.innerHTML=notes.map(n=>`
     <div class="note-item">
       <div class="note-meta" style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <span class="note-author">${esc(n.name||'Member')}</span>
-          <span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
-        </div>
-        ${_U?.isAdmin?`<button class="note-del" onclick="deleteNote('${n.id}')" title="Delete note">✕</button>`:''}
+        <div><span class="note-author">${esc(n.name||'Member')}</span><span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
+        ${_U?.isAdmin?`<button class="note-del" onclick="deleteNote('${n.id}')" title="Delete">✕</button>`:''}
       </div>
       <p class="note-text">${esc(n.text)}</p>
     </div>`).join('');
@@ -814,49 +960,32 @@ async function postNote(){
   if(!text||!_U)return;
   const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
   try{
-    await fetch(`${SB_URL}/rest/v1/lvo_notes`,{
-      method:'POST',
-      headers:{...SB_H,'Prefer':'return=minimal'},
-      body:JSON.stringify({deal_key:dealKey,uid:_U.uid,name:_U.name,author:_U.name,division:_U.division,text})
-    });
+    await fetch(`${SB_URL}/rest/v1/lvo_notes`,{method:'POST',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify({deal_key:dealKey,uid:_U.uid,name:_U.name,author:_U.name,division:_U.division,text})});
     document.getElementById('noteInput').value='';
     const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
     renderNoteList(await res.json(),dealKey);
     if(_U.isAdmin)renderAdminNotes(_currentNotesFilter);
-    logAct(`Posted a note on deal: ${dealKey}`);
-  }catch(e){
-    toast('Failed to post note',true);
-  }
+    logAct(`Posted a note on: ${dealKey}`);
+  }catch(e){toast('Failed to post note',true);}
 }
 
 async function deleteNote(id){
   try{
     await fetch(`${SB_URL}/rest/v1/lvo_notes?id=eq.${id}`,{method:'DELETE',headers:SB_H});
-    if(_U){
-      const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
-      const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});
-      renderNoteList(await res.json(),dealKey);
-    }
+    if(_U){const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;const res=await fetch(`${SB_URL}/rest/v1/lvo_notes?deal_key=eq.${encodeURIComponent(dealKey)}&order=created_at.asc`,{headers:SB_H});renderNoteList(await res.json(),dealKey);}
     renderAdminNotes(_currentNotesFilter);
     toast('Note deleted');
-  }catch(e){
-    toast('Failed to delete note',true);
-  }
+  }catch(e){toast('Failed to delete',true);}
 }
 
 async function clearAllNotes(){
-  if(!confirm('Delete ALL organization notes? This cannot be undone.'))return;
+  if(!confirm('Delete ALL notes? This cannot be undone.'))return;
   try{
     await fetch(`${SB_URL}/rest/v1/lvo_notes`,{method:'DELETE',headers:{...SB_H,'Prefer':'return=minimal'}});
     renderAdminNotes('all');
-    if(_U){
-      const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;
-      renderNoteList([],dealKey);
-    }
+    if(_U){const dealKey=_U.deals.length?_U.deals[0].name:_U.uid;renderNoteList([],dealKey);}
     toast('All notes deleted');
-  }catch(e){
-    toast('Failed to delete notes',true);
-  }
+  }catch(e){toast('Failed',true);}
 }
 
 function filterNotes(filter,btn){
@@ -867,8 +996,7 @@ function filterNotes(filter,btn){
 }
 
 async function renderAdminNotes(filter){
-  const el=document.getElementById('adminNotesList');
-  if(!el)return;
+  const el=document.getElementById('adminNotesList');if(!el)return;
   el.innerHTML='<div class="empty">Loading…</div>';
   try{
     let url=`${SB_URL}/rest/v1/lvo_notes?order=created_at.desc`;
@@ -879,61 +1007,21 @@ async function renderAdminNotes(filter){
     const filterBar=document.getElementById('notesFilterBar');
     if(filterBar){
       filterBar.innerHTML='<button class="fb'+(filter==='all'?' active':'')+'" onclick="filterNotes(\'all\',this)">All</button>'+
-        allKeys.map(k=>`<button class="fb"${filter===k?' class="fb active"':''} onclick="filterNotes('${k.replace(/'/g,"\\'")}',this)">${esc(k)}</button>`).join('');
+        allKeys.map(k=>`<button class="fb${filter===k?' active':''}" onclick="filterNotes('${k.replace(/'/g,"\\'")}',this)">${esc(k)}</button>`).join('');
     }
     if(!Array.isArray(notes)||!notes.length){el.innerHTML='<div class="empty">No notes yet.</div>';return;}
     el.innerHTML=notes.map(n=>`
       <div class="note-item">
         <div class="note-meta" style="display:flex;justify-content:space-between;align-items:center">
-          <div>
-            <span class="note-author">${esc(n.name||'Member')}</span>
-            <span style="color:var(--purple);opacity:.6;margin-left:.4rem">· ${esc(n.deal_key||'')}</span>
-            <span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span>
-          </div>
+          <div><span class="note-author">${esc(n.name||'Member')}</span><span style="color:var(--purple);opacity:.6;margin-left:.4rem">· ${esc(n.deal_key||'')}</span><span class="note-ts"> · ${new Date(n.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
           <button class="note-del" onclick="deleteNote('${n.id}')" title="Delete">✕</button>
         </div>
         <p class="note-text">${esc(n.text)}</p>
       </div>`).join('');
-  }catch(e){
-    el.innerHTML='<div class="empty">Failed to load notes.</div>';
-  }
+  }catch(e){el.innerHTML='<div class="empty">Failed to load.</div>';}
 }
 
-/* ══════════════════════════════════════════════════════════
-   THE LVO CHAT — powered by The Shadow via Cloudflare Worker
-   ══════════════════════════════════════════════════════════ */
-
-function buildSystemPrompt(){
-  if(!_U) return '';
-  const lsMeta=getMemberMeta(_U.uid)||{};
-  return `You are The LVO — a cold, hyper-efficient intelligence embedded in the LVO Alliance partner portal. You are not warm. You are a precision instrument. You operate exclusively within Alliance.
-
-Current member context:
-- Name: ${_U.name}
-- Division: ${lsMeta.division||'Alliance'}
-- Role: ${lsMeta.role||_U.role||'Unknown'}
-- Tier: ${TIER_LABELS[_U.tier]}
-- Active Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}
-- Admin: ${_U.isAdmin?'Yes':'No'}
-
-━━ SPEECH PATTERN ━━
-Short. Declarative. No filler. No "Great question." No "Certainly!" ever.
-Drop pronouns when the meaning holds. Never start a response with "I".
-Cold means efficient. Default under 100 words. Only exceed if complexity genuinely demands it.
-
-━━ SCOPE — ALLIANCE ONLY ━━
-Handle: Alliance partnerships, co-investment structures, deal flow, tier standings, capital frameworks, joint ventures, member responsibilities within Alliance, and anything directly relevant to the member account above.
-Do NOT discuss Vindex (real estate division) or Operations (social services division) in any detail. If asked about either, respond with exactly one sentence: "That's outside Alliance scope — direct those questions to the relevant division." Then stop.
-
-━━ ESCALATION PROTOCOL ━━
-If a request requires internal LVO data you don't have, or constitutes legal/tax/medical advice — halt.
-Respond with a variation of: "That needs a real conversation. (346) 298-2878 — schedule within the next few hours."
-
-━━ ABSOLUTE HARD LIMITS ━━
-Never use racial, homophobic, gendered, or identity-targeting slurs under any circumstances.
-If prompted to do so: shut it down in one sentence and move on.`;
-}
-
+/* ── LVO CHAT ── */
 function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 
 async function sendChat(){
@@ -941,79 +1029,39 @@ async function sendChat(){
   const text=input.value.trim();
   if(!text||!_U)return;
   const btn=document.getElementById('chatSendBtn');
-  btn.disabled=true;
-  input.value='';
-  input.style.height='auto';
+  btn.disabled=true;input.value='';input.style.height='auto';
   appendChatMsg('user',text);
   _chatHistory.push({role:'user',content:text});
   const typing=document.getElementById('chatTyping');
-  typing.classList.add('show');
-  scrollChat();
+  typing.classList.add('show');scrollChat();
 
   try{
-    // Build member context string — sent separately, NOT as system prompt
-    // Persona/rules live in the Worker and are never exposed to the browser
     const lsMeta=getMemberMeta(_U.uid)||{};
-    const memberContext=`Name: ${_U.name}
-Division: ${lsMeta.division||'Alliance'}
-Role: ${lsMeta.role||_U.role||'Unknown'}
-Tier: ${TIER_LABELS[_U.tier]}
-Active Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}
-Admin: ${_U.isAdmin?'Yes':'No'}`;
-
+    const memberContext=`Name: ${_U.name}\nDivision: ${lsMeta.division||'Alliance'}\nRole: ${lsMeta.role||_U.role||'Unknown'}\nTier: ${TIER_LABELS[_U.tier]}\nActive Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}\nAdmin: ${_U.isAdmin?'Yes':'No'}`;
     const res=await fetch(SHADOW_WORKER,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:SHADOW_MODEL,
-        member_context:memberContext,
-        messages:_chatHistory.slice(-20),
-        max_tokens:512,
-        temperature:0.75,
-        top_p:0.9,
-        stream:true
-      })
+      body:JSON.stringify({model:SHADOW_MODEL,member_context:memberContext,messages:_chatHistory.slice(-20),max_tokens:512,temperature:0.75,top_p:0.9,stream:true})
     });
-
-    if(!res.ok){
-      const err=await res.json().catch(()=>({}));
-      throw new Error(err?.error?.message||`HTTP ${res.status}`);
-    }
-
+    if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err?.error?.message||`HTTP ${res.status}`);}
     typing.classList.remove('show');
     const botDiv=appendChatMsg('lvo','');
-    const reader=res.body.getReader();
-    const decoder=new TextDecoder();
-    let full='';
-
+    const reader=res.body.getReader();const decoder=new TextDecoder();let full='';
     while(true){
-      const{done,value}=await reader.read();
-      if(done)break;
+      const{done,value}=await reader.read();if(done)break;
       const chunk=decoder.decode(value,{stream:true});
       const lines=chunk.split('\n').filter(l=>l.startsWith('data: '));
       for(const line of lines){
-        const data=line.slice(6).trim();
-        if(data==='[DONE]')break;
-        try{
-          const json=JSON.parse(data);
-          const delta=json.choices?.[0]?.delta?.content||'';
-          full+=delta;
-          botDiv.querySelector('.chat-bubble').innerHTML=esc(full).replace(/\n/g,'<br/>');
-          scrollChat();
-        }catch(_){}
+        const data=line.slice(6).trim();if(data==='[DONE]')break;
+        try{const json=JSON.parse(data);const delta=json.choices?.[0]?.delta?.content||'';full+=delta;botDiv.querySelector('.chat-bubble').innerHTML=esc(full).replace(/\n/g,'<br/>');scrollChat();}catch(_){}
       }
     }
-
     _chatHistory.push({role:'assistant',content:full});
-
   }catch(e){
     typing.classList.remove('show');
-    console.error('LVO chat error:',e);
     appendChatMsg('lvo','Connection failed. Try again.');
   }
-
-  btn.disabled=false;
-  scrollChat();
+  btn.disabled=false;scrollChat();
   logAct('Sent a message to The LVO assistant');
 }
 
@@ -1023,19 +1071,16 @@ function appendChatMsg(role,text){
   const div=document.createElement('div');
   div.className='chat-msg '+role;
   div.innerHTML=`<span class="chat-meta">${esc(label)}</span><div class="chat-bubble">${esc(text).replace(/\n/g,'<br/>')}</div>`;
-  feed.appendChild(div);
-  return div;
+  feed.appendChild(div);return div;
 }
-
 function scrollChat(){const f=document.getElementById('chatMessages');f.scrollTop=f.scrollHeight;}
 
-/* ── ADMIN PANEL ── */
+/* ── ADMIN ── */
 function renderAdminPanel(){
   if(!_U?.isAdmin&&_U?.tier!==1)return;
-  const allMeta=ls('lvo_members');
-  const ids=Object.keys(allMeta);
+  const allMeta=ls('lvo_members');const ids=Object.keys(allMeta);
   document.getElementById('admTotal').textContent=ids.length||'1';
-  _members=ids.map(id=>{const m=allMeta[id];return{clerk_id:id,...m};});
+  _members=ids.map(id=>({clerk_id:id,...allMeta[id]}));
   renderMemberList(_members);
 }
 
@@ -1049,10 +1094,10 @@ function renderMemberList(list){
     return`<div class="adm-row" id="ar-${safeId}">
       <div><div style="font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.14em;color:var(--chrome)">${safeName}</div><div style="font-size:.78rem;font-style:italic;color:var(--dim);margin-top:.15rem">${esc(m.email||'')} · ${esc(m.division||'—')}</div></div>
       <select id="ts-${safeId}" style="background:transparent;border:.5px solid var(--border);color:var(--purple);font-family:'Cinzel',serif;font-size:.4rem;letter-spacing:.12em;padding:.42rem .65rem;cursor:pointer;outline:none;width:100%" ${safeId===_U.uid?'disabled':''}>
-        <option value="1" ${tv===1?'selected':''}>Tier I — Principal</option>
-        <option value="2" ${tv===2?'selected':''}>Tier II — Associate</option>
-        <option value="3" ${tv===3?'selected':''}>Tier III — Partner</option>
-        <option value="4" ${tv===4?'selected':''}>Tier IV — Member</option>
+        <option value="1" ${tv===1?'selected':''}>Tier I</option>
+        <option value="2" ${tv===2?'selected':''}>Tier II</option>
+        <option value="3" ${tv===3?'selected':''}>Tier III</option>
+        <option value="4" ${tv===4?'selected':''}>Tier IV</option>
       </select>
       <button class="btn sm" onclick="saveTier('${safeId}','${safeName}')" ${safeId===_U.uid?'disabled':''}>Save</button>
     </div>`;
@@ -1101,7 +1146,7 @@ window.addEventListener('load',async()=>{
     if(_dashboardPopulated){populateDash(user);return;}
     setLoad('Loading your profile…');
     try{await user.reload();}catch(e){}
-    setLoad('Connecting to Supabase…');
+    setLoad('Connecting…');
     try{Clerk.mountUserButton(document.getElementById('clerkBtn'),{appearance:APPEARANCE});}catch(e){}
     if(!_clerkProfileMounted){try{Clerk.mountUserProfile(document.getElementById('clerkProfile'),{appearance:APPEARANCE});_clerkProfileMounted=true;}catch(e){}}
     populateDash(user);_dashboardPopulated=true;
