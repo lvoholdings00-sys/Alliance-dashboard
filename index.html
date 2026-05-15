@@ -453,6 +453,20 @@
           <div id="ovAnn"><div class="empty">Loading…</div></div>
         </div>
       </div>
+
+      <!-- AI ASSISTANT — Overview -->
+      <div class="card g-full" id="aiChatCard" style="display:none;margin-bottom:1.2rem">
+        <div class="ch"><span class="ct">The LVO</span><span class="cm">AI Assistant</span></div>
+        <div class="ai-messages" id="aiMessages">
+          <div class="ai-msg lvo"><span class="ai-meta">The LVO</span><div class="ai-bubble">You reached me. What do you need.</div></div>
+        </div>
+        <div class="ai-typing" id="aiTyping"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Processing</span></div>
+        <div class="chat-compose-wrap">
+          <textarea class="chat-input" id="aiInput" placeholder="Speak." rows="1" onkeydown="aiKeydown(event)"></textarea>
+          <button class="chat-send" id="aiSendBtn" onclick="sendAI()">Send →</button>
+        </div>
+      </div>
+
       <div class="card g-full">
         <div class="ch"><span class="ct">Recent Activity</span></div>
         <div style="padding:0 1.4rem" id="actList"><div class="empty">No activity yet.</div></div>
@@ -567,19 +581,6 @@
       <div class="card">
         <div class="ch"><span class="ct">Manage Account</span></div>
         <div class="cb" id="clerkProfile" style="overflow:visible;min-height:200px"></div>
-      </div>
-
-      <!-- AI ASSISTANT -->
-      <div class="card" style="margin-top:1.2rem" id="aiChatCard">
-        <div class="ch"><span class="ct">The LVO</span><span class="cm">AI Assistant</span></div>
-        <div class="ai-messages" id="aiMessages">
-          <div class="ai-msg lvo"><span class="ai-meta">The LVO</span><div class="ai-bubble">You reached me. What do you need.</div></div>
-        </div>
-        <div class="ai-typing" id="aiTyping"><div class="ai-dot"></div><div class="ai-dot"></div><div class="ai-dot"></div><span>Processing</span></div>
-        <div class="chat-compose-wrap">
-          <textarea class="chat-input" id="aiInput" placeholder="Speak." rows="1" onkeydown="aiKeydown(event)"></textarea>
-          <button class="chat-send" id="aiSendBtn" onclick="sendAI()">Send →</button>
-        </div>
       </div>
     </div>
 
@@ -758,8 +759,9 @@
 <script>
 /* ══════════════════════════════════════════════
    CONFIG
+   FIX 1: Updated worker URL to shadow-lvo
 ══════════════════════════════════════════════ */
-const WORKER = 'https://lvo-worker.lvoholdings00.workers.dev';
+const WORKER = 'https://shadow-lvo.lvoholdings00.workers.dev';
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -812,12 +814,7 @@ function logAct(action,isAdmin=false){
   renderAct();
 }
 
-/* ── FETCH HELPERS ──
-   All requests go to the worker.
-   Admin requests include X-Clerk-UID so the worker
-   can verify against its ADMIN_UIDS whitelist.
-   NO secret is ever stored in the HTML.
-*/
+/* ── FETCH HELPERS ── */
 function workerFetch(path, opts={}){
   const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
   return fetch(WORKER + path, {...opts, headers});
@@ -925,6 +922,8 @@ function populateDash(user){
   if(document.getElementById('admMyTier'))
     document.getElementById('admMyTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
   document.getElementById('finMonth').textContent = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+
+  // FIX 3: AI card now lives in overview; show/hide it there
   const aiCard = document.getElementById('aiChatCard');
   if(aiCard) aiCard.style.display = (isAdmin || tier <= 3) ? 'block' : 'none';
 
@@ -1058,7 +1057,7 @@ function renderOvAnn(){
     <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
       ${isLocallyPinned(a.id)?'<span style="font-family:Cinzel,serif;font-size:.3rem;color:var(--gold)">★</span>':''}
       ${a.pinned?'<span style="font-family:Cinzel,serif;font-size:.3rem;color:var(--purple)">◈</span>':''}
-      <div style="font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
+      <div style="font-family:\'Cinzel\',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
     </div>
     <div style="font-size:.8rem;font-style:italic;color:var(--dim2);line-height:1.5">${esc((a.body||'').slice(0,100))}${(a.body||'').length>100?'…':''}</div>
   </div>`).join('');
@@ -1132,6 +1131,8 @@ function startCountdown(){
 
 /* ══════════════════════════════════════════════
    CHATS
+   FIX 2: Group channel onclick uses data attributes
+   instead of inline JSON.stringify to avoid quoting bugs
 ══════════════════════════════════════════════ */
 async function initChatsPanel(){
   if(!_U) return;
@@ -1161,7 +1162,8 @@ function renderChannelList(){
     html += '<div class="dl-section-label">Deal Rooms</div>';
     html += deals.map(d=>{
       const isActive = _activeChannel?.type==='deal' && _activeChannel?.key===d.name;
-      return `<div class="dl-item${isActive?' active':''}" onclick="selectChannel('deal','${esc(d.name)}','')" data-key="${esc(d.name)}" data-type="deal">
+      // Use data-type and data-key; handler reads from dataset
+      return `<div class="dl-item${isActive?' active':''}" data-type="deal" data-key="${esc(d.name)}" onclick="handleChannelClick(this)">
         <div class="dl-item-name">${esc(d.name)}</div>
         <div class="dl-item-type">Deal Room</div>
       </div>`;
@@ -1171,7 +1173,8 @@ function renderChannelList(){
     html += '<div class="dl-section-label">Group Channels</div>';
     html += myGroups.map(g=>{
       const isActive = _activeChannel?.type==='group' && _activeChannel?.id===g.id;
-      return `<div class="dl-item${isActive?' active':''}" onclick="selectChannel('group','',${JSON.stringify(g.id)})" data-key="${esc(g.id)}" data-type="group">
+      // FIX: store group id in data-gid attribute; no inline JS string interpolation of id
+      return `<div class="dl-item${isActive?' active':''}" data-type="group" data-gid="${esc(g.id)}" onclick="handleChannelClick(this)">
         <div class="dl-item-name">${esc(g.name)}</div>
         <div class="dl-item-type">Group Channel</div>
       </div>`;
@@ -1179,17 +1182,32 @@ function renderChannelList(){
   }
   if(!html) html = '<div class="empty" style="padding:1rem;font-size:.78rem">No channels available.</div>';
   el.innerHTML = html;
+  // Auto-select first channel if none active
   if(!_activeChannel){
     if(deals.length) selectChannel('deal', deals[0].name, '');
     else if(myGroups.length) selectChannel('group', '', myGroups[0].id);
   }
 }
 
+// FIX 2: Single dispatcher reads data attributes cleanly
+function handleChannelClick(el){
+  const type = el.dataset.type;
+  if(type === 'deal'){
+    selectChannel('deal', el.dataset.key, '');
+  } else {
+    selectChannel('group', '', el.dataset.gid);
+  }
+}
+
 async function selectChannel(type, dealKey, groupId){
   _activeChannel = {type, key:dealKey, id:groupId};
+  // Update active state on list items
   document.querySelectorAll('#chatChannelList .dl-item').forEach(el=>{
-    if(type==='deal') el.classList.toggle('active', el.dataset.type==='deal' && el.dataset.key===dealKey);
-    else el.classList.toggle('active', el.dataset.type==='group' && el.dataset.key===groupId);
+    if(type==='deal'){
+      el.classList.toggle('active', el.dataset.type==='deal' && el.dataset.key===dealKey);
+    } else {
+      el.classList.toggle('active', el.dataset.type==='group' && el.dataset.gid===groupId);
+    }
   });
   const titleEl = document.getElementById('activeChatTitle');
   const typeEl  = document.getElementById('activeChatType');
@@ -1262,6 +1280,7 @@ async function sendChat(){
 
 /* ══════════════════════════════════════════════
    AI ASSISTANT
+   FIX 1: Uses WORKER constant (now shadow-lvo)
 ══════════════════════════════════════════════ */
 function aiKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 
@@ -1632,7 +1651,7 @@ async function loadAdminChatList(){
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const deals = await res.json();
       if(!deals.length){el.innerHTML='<div class="empty" style="padding:1rem">No deal chats yet.</div>';return;}
-      el.innerHTML = deals.map(d=>`<div class="dl-item" onclick="selectAdminChat('deal','${esc(d)}','')" data-key="${esc(d)}">
+      el.innerHTML = deals.map(d=>`<div class="dl-item" data-type="deal" data-key="${esc(d)}" onclick="selectAdminChat('deal',this.dataset.key,'')">
         <div class="dl-item-name">${esc(d)}</div>
         <div class="dl-item-type">Deal Room</div>
       </div>`).join('');
@@ -1641,7 +1660,7 @@ async function loadAdminChatList(){
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       const groups = await res.json();
       if(!groups.length){el.innerHTML='<div class="empty" style="padding:1rem">No group chats yet.</div>';return;}
-      el.innerHTML = groups.map(g=>`<div class="dl-item" onclick="selectAdminChat('group','','${esc(g.id)}')" data-key="${esc(g.id)}">
+      el.innerHTML = groups.map(g=>`<div class="dl-item" data-type="group" data-gid="${esc(g.id)}" onclick="selectAdminChat('group','',this.dataset.gid)">
         <div class="dl-item-name">${esc(g.name)}</div>
         <div class="dl-item-type">Group Channel</div>
       </div>`).join('');
@@ -1652,7 +1671,8 @@ async function loadAdminChatList(){
 async function selectAdminChat(type, dealKey, groupId){
   document.querySelectorAll('#admChatList .dl-item').forEach(el=>{
     const k = type==='deal' ? dealKey : groupId;
-    el.classList.toggle('active', el.dataset.key===k);
+    const elKey = type==='deal' ? el.dataset.key : el.dataset.gid;
+    el.classList.toggle('active', elKey===k);
   });
   const label = type==='deal' ? dealKey : (_groups.find(g=>g.id===groupId)?.name||groupId);
   document.getElementById('admChatTitle').textContent = label;
