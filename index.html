@@ -270,7 +270,6 @@
     .adm-tab.active{color:var(--purple);border-bottom-color:var(--purple)}
     .adm-section{display:none}.adm-section.active{display:block;animation:panelIn .25s ease}
 
-    /* Post Announcement Form */
     .ann-form{display:grid;gap:.8rem}
     .ann-form-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem}
     .form-group{display:flex;flex-direction:column;gap:.4rem}
@@ -283,7 +282,6 @@
     .form-textarea:focus{border-color:var(--purple)}
     .form-textarea::placeholder{color:var(--dim);font-style:italic}
 
-    /* Group form */
     .group-member-list{max-height:180px;overflow-y:auto;border:.5px solid var(--border);padding:.5rem}
     .group-member-list::-webkit-scrollbar{width:2px}
     .group-member-list::-webkit-scrollbar-thumb{background:var(--border)}
@@ -293,13 +291,11 @@
     .gm-check-lbl{font-size:.84rem;font-style:italic;color:var(--chrome)}
     .gm-check-sub{font-family:'Cinzel',serif;font-size:.32rem;letter-spacing:.15em;color:var(--dim)}
 
-    /* Member rows */
     .member-row{display:grid;grid-template-columns:1fr 140px 80px;gap:.8rem;align-items:center;padding:.95rem 0;border-bottom:.5px solid var(--border)}
     .member-row:last-child{border-bottom:none}
     .member-name{font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.14em;color:var(--chrome)}
     .member-email{font-size:.78rem;font-style:italic;color:var(--dim);margin-top:.15rem}
 
-    /* Group rows in admin */
     .group-row{display:flex;align-items:flex-start;gap:1rem;padding:1rem 0;border-bottom:.5px solid var(--border)}
     .group-row:last-child{border-bottom:none}
     .group-row-info{flex:1;min-width:0}
@@ -308,7 +304,6 @@
     .group-row-meta{font-family:'Cinzel',serif;font-size:.33rem;letter-spacing:.18em;color:var(--dim);margin-top:.25rem}
     .group-row-actions{display:flex;gap:.4rem;flex-shrink:0}
 
-    /* Activity */
     .act-item{display:flex;gap:1rem;padding:.75rem 0;border-bottom:.5px solid var(--border)}
     .act-item:last-child{border-bottom:none}
     .act-dot{width:4px;height:4px;border-radius:50%;background:var(--purple);flex-shrink:0;margin-top:.35rem}
@@ -316,7 +311,6 @@
     .act-time{font-family:'Cinzel',serif;font-size:.32rem;letter-spacing:.18em;color:var(--dim);margin-bottom:.12rem}
     .act-txt{font-size:.82rem;font-style:italic;color:var(--chrome);line-height:1.5}
 
-    /* Admin announcement list */
     .adm-ann{padding:1rem 1.2rem;border-bottom:.5px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:1rem}
     .adm-ann:last-child{border-bottom:none}
     .adm-ann:hover{background:var(--purple-glow)}
@@ -478,12 +472,10 @@
       <div id="chatsLocked" class="locked-notice" style="display:none"><p class="ln-text">Chats <span>Restricted</span><br/>Unlocked at Tier III and above</p></div>
       <div id="chatsContent" style="display:none">
         <div class="chat-wrap">
-          <!-- LEFT: combined deal + group list -->
           <div class="chat-list-panel">
             <div class="dl-header">Channels</div>
             <div id="chatChannelList"><div class="empty" style="padding:1rem;font-size:.78rem">Loading…</div></div>
           </div>
-          <!-- RIGHT: messages -->
           <div class="chat-panel">
             <div class="chat-panel-hd">
               <div>
@@ -697,7 +689,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Members (select specific, or leave all checked for tier-based)</label>
+                  <label class="form-label">Members (leave all checked for tier-based access)</label>
                   <div class="group-member-list" id="grpMemberList"><div class="empty" style="padding:.5rem">Load members first</div></div>
                 </div>
                 <div class="btn-row">
@@ -713,7 +705,7 @@
         </div>
       </div>
 
-      <!-- ADMIN: CHATS (moderation) -->
+      <!-- ADMIN: CHATS -->
       <div class="adm-section" id="adm-chats">
         <div class="fbar" style="margin-bottom:1rem">
           <button class="fb active" onclick="switchAdmChat('deals',this)">Deal Chats</button>
@@ -765,10 +757,9 @@
 
 <script>
 /* ══════════════════════════════════════════════
-   CONFIG — update WORKER to your new worker URL
+   CONFIG
 ══════════════════════════════════════════════ */
-const WORKER = 'https://lvo-worker.lvoholdings00.workers.dev/'; // ← replace with your new worker URL
-const ADMIN_SECRET = 'YOUR_ADMIN_SECRET_HERE';        // ← replace before deploying
+const WORKER = 'https://lvo-worker.lvoholdings00.workers.dev';
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -782,46 +773,67 @@ const TIER_LABELS = {
 ══════════════════════════════════════════════ */
 let _U = null;
 let _ann = [], _annFilter = 'all', _annTimer = null, _annSec = 900;
-let _localPins = {}; // personal pins: { annId: true }
+let _localPins = {};
 let _activity = [], _members = [], _groups = [];
-let _activeChannel = null; // { type:'deal'|'group', key, id }
+let _activeChannel = null;
 let _chatPollTimer = null;
 let _aiHistory = [];
 let _clerkProfileMounted = false;
-let _admChatType = 'deals'; // 'deals' | 'groups'
+let _admChatType = 'deals';
 
 /* ══════════════════════════════════════════════
    UTILS
 ══════════════════════════════════════════════ */
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
 function toast(msg,type=''){
   const z=document.getElementById('toasts');
   const el=document.createElement('div');
-  el.className='tst'+(type?' '+type:'');el.textContent=msg;z.appendChild(el);
+  el.className='tst'+(type?' '+type:'');
+  el.textContent=msg;
+  z.appendChild(el);
   setTimeout(()=>el.remove(),3200);
 }
-function setLoad(msg){const el=document.getElementById('loadStatus');if(el)el.textContent=msg}
+
+function setLoad(msg){
+  const el=document.getElementById('loadStatus');
+  if(el) el.textContent=msg;
+}
+
 function setSbStatus(ok,msg){
   const el=document.getElementById('sbStatus');
   el.className='sb-status '+(ok?'ok':'err');
   el.textContent=(ok?'● ':'○ ')+msg;
 }
+
 function logAct(action,isAdmin=false){
   _activity.unshift({action,isAdmin,time:new Date().toISOString()});
-  _activity=_activity.slice(0,50);renderAct();
+  _activity=_activity.slice(0,50);
+  renderAct();
 }
 
-function workerFetch(path,opts={}){
-  const headers={'Content-Type':'application/json',...(opts.headers||{})};
-  return fetch(WORKER+path,{...opts,headers});
+/* ── FETCH HELPERS ──
+   All requests go to the worker.
+   Admin requests include X-Clerk-UID so the worker
+   can verify against its ADMIN_UIDS whitelist.
+   NO secret is ever stored in the HTML.
+*/
+function workerFetch(path, opts={}){
+  const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+  return fetch(WORKER + path, {...opts, headers});
 }
-function adminFetch(path,opts={}){
-  return workerFetch(path,{...opts,headers:{...opts.headers,'X-Admin-Secret':ADMIN_SECRET}});
+
+function adminFetch(path, opts={}){
+  // Send Clerk UID — worker checks it against ADMIN_UIDS whitelist
+  const uid = _U?.uid || '';
+  return workerFetch(path, {
+    ...opts,
+    headers: {...(opts.headers||{}), 'X-Clerk-UID': uid}
+  });
 }
 
 /* ══════════════════════════════════════════════
-   LOCAL PINS (stored in localStorage, per-user)
-   Key: lvo_pins_{uid}
+   LOCAL PINS
 ══════════════════════════════════════════════ */
 function loadLocalPins(){
   if(!_U) return;
@@ -830,10 +842,12 @@ function loadLocalPins(){
     _localPins = raw ? JSON.parse(raw) : {};
   }catch{ _localPins = {}; }
 }
+
 function saveLocalPins(){
   if(!_U) return;
   try{ localStorage.setItem(`lvo_pins_${_U.uid}`, JSON.stringify(_localPins)); }catch{}
 }
+
 function toggleLocalPin(annId){
   if(_localPins[annId]) delete _localPins[annId];
   else _localPins[annId] = true;
@@ -842,6 +856,7 @@ function toggleLocalPin(annId){
   renderOvAnn();
   toast(_localPins[annId] ? '★ Pinned to your view' : 'Unpinned', 'ok');
 }
+
 function isLocallyPinned(annId){ return !!_localPins[annId]; }
 
 /* ══════════════════════════════════════════════
@@ -877,183 +892,205 @@ function switchAdmTab(name,btn){
    POPULATE DASHBOARD
 ══════════════════════════════════════════════ */
 function populateDash(user){
-  const meta=user.publicMetadata||{};
-  const name=user.fullName||user.firstName||'Member';
-  const email=user.primaryEmailAddress?.emailAddress||'—';
-  const isAdmin=meta.role==='admin';
-  const tier=parseInt(meta.tier)||4;
-  const division=meta.division||'Alliance';
-  const role=meta.role||'member';
-  const joined=user.createdAt?new Date(user.createdAt).toLocaleDateString('en-US',{month:'long',year:'numeric'}):'—';
-  const deals=Array.isArray(meta.active_deals)?meta.active_deals:[];
+  const meta = user.publicMetadata || {};
+  const name = user.fullName || user.firstName || 'Member';
+  const email = user.primaryEmailAddress?.emailAddress || '—';
+  const isAdmin = meta.role === 'admin';
+  const tier = parseInt(meta.tier) || 4;
+  const division = meta.division || 'Alliance';
+  const role = meta.role || 'member';
+  const joined = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US',{month:'long',year:'numeric'})
+    : '—';
+  const deals = Array.isArray(meta.active_deals) ? meta.active_deals : [];
 
-  _U={uid:user.id,name,email,isAdmin,tier,division,role,joined,deals};
+  _U = {uid:user.id, name, email, isAdmin, tier, division, role, joined, deals};
   loadLocalPins();
 
-  document.getElementById('tbName').textContent=name;
-  document.getElementById('tbTier').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
-  document.getElementById('ovTitle').textContent=`Welcome, ${name.split(' ')[0]}`;
-  document.getElementById('sTier').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
-  document.getElementById('sJoined').textContent=joined;
-  document.getElementById('tierPageVal').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
-  document.getElementById('acTier').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
-  document.getElementById('acName').textContent=name;
-  document.getElementById('acEmail').textContent=email;
-  document.getElementById('acDiv').textContent=division;
-  document.getElementById('acRole').textContent=isAdmin?'Administrator':role;
-  document.getElementById('acJoined').textContent=joined;
-  document.getElementById('admBadgeWrap').style.display=isAdmin?'block':'none';
-  document.getElementById('adminNav').style.display=isAdmin?'flex':'none';
-  const bnAdmin=document.getElementById('bnAdminItem');
-  if(bnAdmin) bnAdmin.style.display=isAdmin?'flex':'none';
+  document.getElementById('tbName').textContent = name;
+  document.getElementById('tbTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  document.getElementById('ovTitle').textContent = `Welcome, ${name.split(' ')[0]}`;
+  document.getElementById('sTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  document.getElementById('sJoined').textContent = joined;
+  document.getElementById('tierPageVal').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  document.getElementById('acTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  document.getElementById('acName').textContent = name;
+  document.getElementById('acEmail').textContent = email;
+  document.getElementById('acDiv').textContent = division;
+  document.getElementById('acRole').textContent = isAdmin ? 'Administrator' : role;
+  document.getElementById('acJoined').textContent = joined;
+  document.getElementById('admBadgeWrap').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('adminNav').style.display = isAdmin ? 'flex' : 'none';
+  const bnAdmin = document.getElementById('bnAdminItem');
+  if(bnAdmin) bnAdmin.style.display = isAdmin ? 'flex' : 'none';
   if(document.getElementById('admMyTier'))
-    document.getElementById('admMyTier').textContent=TIER_LABELS[tier]||TIER_LABELS[4];
-  document.getElementById('finMonth').textContent=new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  const aiCard=document.getElementById('aiChatCard');
-  if(aiCard) aiCard.style.display=(isAdmin||tier<=3)?'block':'none';
+    document.getElementById('admMyTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  document.getElementById('finMonth').textContent = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  const aiCard = document.getElementById('aiChatCard');
+  if(aiCard) aiCard.style.display = (isAdmin || tier <= 3) ? 'block' : 'none';
 
-  renderDeals(deals,tier,isAdmin);
-  renderFin(deals,tier,isAdmin);
+  renderDeals(deals, tier, isAdmin);
+  renderFin(deals, tier, isAdmin);
   initChatsPanel();
 
-  workerFetch('/members',{method:'POST',body:JSON.stringify({uid:user.id,name,email,tier,division,role,joined:user.createdAt,deals})});
+  // Register/update member in worker
+  workerFetch('/members', {
+    method: 'POST',
+    body: JSON.stringify({uid:user.id, name, email, tier, division, role, joined:user.createdAt, deals})
+  }).catch(e => console.warn('Member sync failed:', e));
 }
 
 /* ══════════════════════════════════════════════
    DEALS
 ══════════════════════════════════════════════ */
-function dealHTML(d,isAdmin,tier){
-  const sc=(d.status||'active').toLowerCase();
-  const showCap=isAdmin||tier<=1;
-  return`<div class="deal">
-    <div class="deal-hd"><span class="deal-name">${esc(d.name||'Unnamed')}</span><span class="deal-st ${sc}">${esc(d.status||'Active')}</span></div>
+function dealHTML(d, isAdmin, tier){
+  const sc = (d.status || 'active').toLowerCase();
+  const showCap = isAdmin || tier <= 1;
+  return `<div class="deal">
+    <div class="deal-hd">
+      <span class="deal-name">${esc(d.name||'Unnamed')}</span>
+      <span class="deal-st ${sc}">${esc(d.status||'Active')}</span>
+    </div>
     <div class="deal-meta">
       <div><div class="dm-lbl">Division</div><div class="dm-val">${esc(d.division||'—')}</div></div>
       <div><div class="dm-lbl">Position</div><div class="dm-val">${esc(d.position||'—')}</div></div>
       <div><div class="dm-lbl">Date</div><div class="dm-val">${esc(d.date||'—')}</div></div>
-      ${showCap&&d.capital?`<div><div class="dm-lbl">Capital</div><div class="dm-val">${esc(d.capital)}</div></div>`:''}
+      ${showCap && d.capital ? `<div><div class="dm-lbl">Capital</div><div class="dm-val">${esc(d.capital)}</div></div>` : ''}
     </div>
-    ${d.note?`<div class="deal-note">${esc(d.note)}</div>`:''}
+    ${d.note ? `<div class="deal-note">${esc(d.note)}</div>` : ''}
   </div>`;
 }
 
-function renderDeals(deals,tier,isAdmin){
-  const canSee=isAdmin||tier<=3;
-  document.getElementById('sDeals').textContent=canSee?deals.length:'—';
-  document.getElementById('ovDealCount').textContent=canSee?`${deals.length} deal${deals.length!==1?'s':''}`:'Restricted';
-  if(deals.length&&canSee){
-    document.getElementById('dealsBadge').style.display='block';
-    document.getElementById('dealsBadge').textContent=deals.length;
+function renderDeals(deals, tier, isAdmin){
+  const canSee = isAdmin || tier <= 3;
+  document.getElementById('sDeals').textContent = canSee ? deals.length : '—';
+  document.getElementById('ovDealCount').textContent = canSee ? `${deals.length} deal${deals.length!==1?'s':''}` : 'Restricted';
+  if(deals.length && canSee){
+    document.getElementById('dealsBadge').style.display = 'block';
+    document.getElementById('dealsBadge').textContent = deals.length;
     document.getElementById('bnDealDot').classList.add('show');
   }
-  const ovEl=document.getElementById('ovDeals');
+  const ovEl = document.getElementById('ovDeals');
   if(!canSee){
-    ovEl.innerHTML='<div class="empty">Unlocked at Tier III+</div>';
-    document.getElementById('dealsLocked').style.display='block';
-    document.getElementById('dealsContent').innerHTML='';
+    ovEl.innerHTML = '<div class="empty">Unlocked at Tier III+</div>';
+    document.getElementById('dealsLocked').style.display = 'block';
+    document.getElementById('dealsContent').innerHTML = '';
     return;
   }
-  document.getElementById('dealsLocked').style.display='none';
+  document.getElementById('dealsLocked').style.display = 'none';
   if(!deals.length){
-    ovEl.innerHTML='<div class="empty">No deals assigned.</div>';
-    document.getElementById('dealsContent').innerHTML='<div class="empty" style="padding:1.5rem">No deals assigned yet.</div>';
+    ovEl.innerHTML = '<div class="empty">No deals assigned.</div>';
+    document.getElementById('dealsContent').innerHTML = '<div class="empty" style="padding:1.5rem">No deals assigned yet.</div>';
     return;
   }
-  ovEl.innerHTML=deals.slice(0,2).map(d=>dealHTML(d,isAdmin,tier)).join('');
-  document.getElementById('dealsContent').innerHTML=`<div class="card">${deals.map(d=>dealHTML(d,isAdmin,tier)).join('')}</div>`;
+  ovEl.innerHTML = deals.slice(0,2).map(d => dealHTML(d, isAdmin, tier)).join('');
+  document.getElementById('dealsContent').innerHTML = `<div class="card">${deals.map(d => dealHTML(d, isAdmin, tier)).join('')}</div>`;
 }
 
 /* ══════════════════════════════════════════════
    FINANCIALS
 ══════════════════════════════════════════════ */
-function renderFin(deals,tier,isAdmin){
-  const canSee=isAdmin||tier<=3;
-  document.getElementById('finLocked').style.display=canSee?'none':'block';
-  document.getElementById('finContent').style.display=canSee?'block':'none';
-  if(!canSee)return;
-  const showCap=isAdmin||tier<=1;
-  let total=0;
-  deals.forEach(d=>{if(!d.capital)return;const n=parseFloat(String(d.capital).replace(/[$,\s~]/g,''));if(!isNaN(n))total+=n;});
-  document.getElementById('finCap').textContent=showCap?(total?'$'+total.toLocaleString('en-US'):'—'):'Restricted';
-  document.getElementById('finEq').textContent=deals.length||'—';
-  document.getElementById('finDls').textContent=deals.filter(d=>(d.status||'').toLowerCase()==='active').length||deals.length||'—';
-  const tb=document.getElementById('finTbody');
-  if(!deals.length){tb.innerHTML='<tr><td colspan="5"><div class="empty">No deal positions on file.</div></td></tr>';return;}
-  tb.innerHTML=deals.map(d=>{const sc=(d.status||'active').toLowerCase();return`<tr>
-    <td><span class="ft-lbl">Deal</span>${esc(d.name||'—')}</td>
-    <td><span class="ft-lbl">Position</span>${esc(d.position||'—')}</td>
-    <td><span class="ft-lbl">Division</span>${esc(d.division||'—')}</td>
-    <td><span class="deal-st ${sc}" style="display:inline-block">${esc(d.status||'Active')}</span></td>
-    <td>${showCap?esc(d.capital||'—'):'—'}</td>
-  </tr>`}).join('');
+function renderFin(deals, tier, isAdmin){
+  const canSee = isAdmin || tier <= 3;
+  document.getElementById('finLocked').style.display = canSee ? 'none' : 'block';
+  document.getElementById('finContent').style.display = canSee ? 'block' : 'none';
+  if(!canSee) return;
+  const showCap = isAdmin || tier <= 1;
+  let total = 0;
+  deals.forEach(d => {
+    if(!d.capital) return;
+    const n = parseFloat(String(d.capital).replace(/[$,\s~]/g,''));
+    if(!isNaN(n)) total += n;
+  });
+  document.getElementById('finCap').textContent = showCap ? (total ? '$'+total.toLocaleString('en-US') : '—') : 'Restricted';
+  document.getElementById('finEq').textContent = deals.length || '—';
+  document.getElementById('finDls').textContent = deals.filter(d=>(d.status||'').toLowerCase()==='active').length || deals.length || '—';
+  const tb = document.getElementById('finTbody');
+  if(!deals.length){
+    tb.innerHTML = '<tr><td colspan="5"><div class="empty">No deal positions on file.</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = deals.map(d => {
+    const sc = (d.status||'active').toLowerCase();
+    return `<tr>
+      <td><span class="ft-lbl">Deal</span>${esc(d.name||'—')}</td>
+      <td><span class="ft-lbl">Position</span>${esc(d.position||'—')}</td>
+      <td><span class="ft-lbl">Division</span>${esc(d.division||'—')}</td>
+      <td><span class="deal-st ${sc}" style="display:inline-block">${esc(d.status||'Active')}</span></td>
+      <td>${showCap ? esc(d.capital||'—') : '—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* ══════════════════════════════════════════════
-   ANNOUNCEMENTS — personal pins stored locally
+   ANNOUNCEMENTS
 ══════════════════════════════════════════════ */
 async function fetchAnn(manual=false){
-  _annSec=900;
+  _annSec = 900;
   try{
-    const res=await workerFetch('/announcements');
+    const res = await workerFetch('/announcements');
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    _ann=await res.json();
-    renderAnnList();renderOvAnn();
-    // Show badge if there are any pinned items (global) user hasn't seen
-    const gPinned=_ann.filter(a=>a.pinned&&(a.division==='Alliance'||a.division==='All'));
+    _ann = await res.json();
+    renderAnnList();
+    renderOvAnn();
+    const gPinned = _ann.filter(a => a.pinned && (a.division==='Alliance'||a.division==='All'));
     if(gPinned.length){
-      document.getElementById('annBadge').style.display='block';
+      document.getElementById('annBadge').style.display = 'block';
       document.getElementById('bnAnnDot').classList.add('show');
     }
-    setSbStatus(true,'Connected · Live');
-    const t=new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-    document.getElementById('ovAnnTime').textContent=`Updated ${t}`;
-    if(manual) toast('Announcements refreshed','ok');
+    setSbStatus(true, 'Connected · Live');
+    const t = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    document.getElementById('ovAnnTime').textContent = `Updated ${t}`;
+    if(manual) toast('Announcements refreshed', 'ok');
   }catch(e){
-    console.error(e);setSbStatus(false,'Worker error');
-    if(manual) toast('Refresh failed','err');
+    console.error('fetchAnn error:', e);
+    setSbStatus(false, 'Worker error');
+    if(manual) toast('Refresh failed — check console', 'err');
   }
 }
 
 function renderOvAnn(){
-  const el=document.getElementById('ovAnn');
-  // Show locally pinned first, then recents
-  const myPins=_ann.filter(a=>(a.division==='Alliance'||a.division==='All')&&isLocallyPinned(a.id));
-  const rest=_ann.filter(a=>(a.division==='Alliance'||a.division==='All')&&!isLocallyPinned(a.id));
-  const items=[...myPins,...rest].slice(0,3);
+  const el = document.getElementById('ovAnn');
+  const myPins = _ann.filter(a=>(a.division==='Alliance'||a.division==='All') && isLocallyPinned(a.id));
+  const rest   = _ann.filter(a=>(a.division==='Alliance'||a.division==='All') && !isLocallyPinned(a.id));
+  const items  = [...myPins, ...rest].slice(0,3);
   if(!items.length){el.innerHTML='<div class="empty">No announcements yet.</div>';return;}
-  el.innerHTML=items.map(a=>`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">
+  el.innerHTML = items.map(a=>`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">
     <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem">
       ${isLocallyPinned(a.id)?'<span style="font-family:Cinzel,serif;font-size:.3rem;color:var(--gold)">★</span>':''}
       ${a.pinned?'<span style="font-family:Cinzel,serif;font-size:.3rem;color:var(--purple)">◈</span>':''}
-      <div style="font-family:\'Cinzel\',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
+      <div style="font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.1em;color:var(--chrome)">${esc(a.title||'')}</div>
     </div>
     <div style="font-size:.8rem;font-style:italic;color:var(--dim2);line-height:1.5">${esc((a.body||'').slice(0,100))}${(a.body||'').length>100?'…':''}</div>
   </div>`).join('');
-  const last=el.querySelector('div:last-child');if(last)last.style.borderBottom='none';
+  const last = el.querySelector('div:last-child');
+  if(last) last.style.borderBottom = 'none';
 }
 
 function renderAnnList(){
-  const el=document.getElementById('annList');
-  let data=[..._ann];
-  if(_annFilter==='all') data=data.filter(a=>a.division==='All'||a.division==='Alliance');
-  else if(_annFilter==='pinned') data=data.filter(a=>(a.division==='All'||a.division==='Alliance')&&isLocallyPinned(a.id));
-  else if(_annFilter==='div') data=data.filter(a=>a.division==='Alliance');
-  // Sort: locally pinned first, then globally pinned, then by date
+  const el = document.getElementById('annList');
+  let data = [..._ann];
+  if(_annFilter==='all')    data = data.filter(a=>a.division==='All'||a.division==='Alliance');
+  else if(_annFilter==='pinned') data = data.filter(a=>(a.division==='All'||a.division==='Alliance')&&isLocallyPinned(a.id));
+  else if(_annFilter==='div')  data = data.filter(a=>a.division==='Alliance');
   data.sort((a,b)=>{
-    const ap=isLocallyPinned(a.id)?2:a.pinned?1:0;
-    const bp=isLocallyPinned(b.id)?2:b.pinned?1:0;
+    const ap = isLocallyPinned(a.id)?2:a.pinned?1:0;
+    const bp = isLocallyPinned(b.id)?2:b.pinned?1:0;
     if(ap!==bp) return bp-ap;
     return new Date(b.created_at)-new Date(a.created_at);
   });
-  if(!data.length){el.innerHTML='<div class="empty" style="padding:1.5rem">'+(
-    _annFilter==='pinned'?'No pinned announcements. Tap ★ on any announcement to pin it to your view.':'No announcements found.'
-  )+'</div>';return;}
-  el.innerHTML=data.map(a=>{
-    const lp=isLocallyPinned(a.id);
-    let cls='ann';
-    if(lp) cls+=' locally-pinned';
-    else if(a.pinned) cls+=' globally-pinned';
-    return`<div class="${cls}">
+  if(!data.length){
+    el.innerHTML = `<div class="empty" style="padding:1.5rem">${
+      _annFilter==='pinned'?'No pinned announcements. Tap ★ on any announcement to pin it.':'No announcements found.'
+    }</div>`;
+    return;
+  }
+  el.innerHTML = data.map(a=>{
+    const lp = isLocallyPinned(a.id);
+    let cls = 'ann';
+    if(lp) cls += ' locally-pinned';
+    else if(a.pinned) cls += ' globally-pinned';
+    return `<div class="${cls}">
       <div class="ann-hd">
         <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
           ${lp?'<span class="ann-pin-badge local">★ Your Pin</span>':''}
@@ -1077,8 +1114,8 @@ function renderAnnList(){
   }).join('');
 }
 
-function filterAnn(type,btn){
-  _annFilter=type;
+function filterAnn(type, btn){
+  _annFilter = type;
   document.querySelectorAll('#p-announcements .fb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderAnnList();
@@ -1086,97 +1123,89 @@ function filterAnn(type,btn){
 
 function startCountdown(){
   clearInterval(_annTimer);
-  _annTimer=setInterval(()=>{
+  _annTimer = setInterval(()=>{
     _annSec--;
-    const m=Math.floor(_annSec/60),s=_annSec%60;
-    document.getElementById('refreshLabel').textContent=`${m}:${String(s).padStart(2,'0')}`;
+    const m = Math.floor(_annSec/60), s = _annSec%60;
+    document.getElementById('refreshLabel').textContent = `${m}:${String(s).padStart(2,'0')}`;
     if(_annSec<=0) fetchAnn();
   },1000);
 }
 
 /* ══════════════════════════════════════════════
-   CHATS — unified deal + group channels
+   CHATS
 ══════════════════════════════════════════════ */
 async function initChatsPanel(){
   if(!_U) return;
-  const canAccess=_U.isAdmin||_U.tier<=3;
-  document.getElementById('chatsLocked').style.display=canAccess?'none':'block';
-  document.getElementById('chatsContent').style.display=canAccess?'block':'none';
+  const canAccess = _U.isAdmin || _U.tier <= 3;
+  document.getElementById('chatsLocked').style.display  = canAccess ? 'none'  : 'block';
+  document.getElementById('chatsContent').style.display = canAccess ? 'block' : 'none';
   if(!canAccess) return;
-
-  // Fetch groups from worker
   try{
-    const res=await workerFetch('/groups');
-    if(res.ok) _groups=await res.json();
-  }catch{}
-
+    const res = await workerFetch('/groups');
+    if(res.ok) _groups = await res.json();
+  }catch(e){ console.warn('Groups fetch failed:', e); }
   renderChannelList();
 }
 
 function renderChannelList(){
-  const el=document.getElementById('chatChannelList');
-  const deals=_U?.deals||[];
-  // Filter groups this user can see (by tier or explicit memberUids)
-  const myGroups=_groups.filter(g=>{
+  const el = document.getElementById('chatChannelList');
+  const deals = _U?.deals || [];
+  const myGroups = _groups.filter(g=>{
     if(_U.isAdmin) return true;
-    const tierOk=_U.tier<=parseInt(g.tier_min||4);
-    const hasUids=g.memberUids&&g.memberUids.length>0;
-    const uidOk=hasUids?g.memberUids.includes(_U.uid):true;
-    return tierOk&&uidOk;
+    const tierOk = _U.tier <= parseInt(g.tier_min||4);
+    const hasUids = g.memberUids && g.memberUids.length > 0;
+    const uidOk  = hasUids ? g.memberUids.includes(_U.uid) : true;
+    return tierOk && uidOk;
   });
-
-  let html='';
+  let html = '';
   if(deals.length){
-    html+='<div class="dl-section-label">Deal Rooms</div>';
-    html+=deals.map(d=>{
-      const isActive=_activeChannel?.type==='deal'&&_activeChannel?.key===d.name;
-      return`<div class="dl-item${isActive?' active':''}" onclick="selectChannel('deal','${esc(d.name)}','')" data-key="${esc(d.name)}" data-type="deal">
+    html += '<div class="dl-section-label">Deal Rooms</div>';
+    html += deals.map(d=>{
+      const isActive = _activeChannel?.type==='deal' && _activeChannel?.key===d.name;
+      return `<div class="dl-item${isActive?' active':''}" onclick="selectChannel('deal','${esc(d.name)}','')" data-key="${esc(d.name)}" data-type="deal">
         <div class="dl-item-name">${esc(d.name)}</div>
         <div class="dl-item-type">Deal Room</div>
       </div>`;
     }).join('');
   }
   if(myGroups.length){
-    html+='<div class="dl-section-label">Group Channels</div>';
-    html+=myGroups.map(g=>{
-      const isActive=_activeChannel?.type==='group'&&_activeChannel?.id===g.id;
-      return`<div class="dl-item${isActive?' active':''}" onclick="selectChannel('group','',${JSON.stringify(g.id)})" data-key="${esc(g.id)}" data-type="group">
+    html += '<div class="dl-section-label">Group Channels</div>';
+    html += myGroups.map(g=>{
+      const isActive = _activeChannel?.type==='group' && _activeChannel?.id===g.id;
+      return `<div class="dl-item${isActive?' active':''}" onclick="selectChannel('group','',${JSON.stringify(g.id)})" data-key="${esc(g.id)}" data-type="group">
         <div class="dl-item-name">${esc(g.name)}</div>
         <div class="dl-item-type">Group Channel</div>
       </div>`;
     }).join('');
   }
-  if(!html) html='<div class="empty" style="padding:1rem;font-size:.78rem">No channels available.</div>';
-  el.innerHTML=html;
-
-  // Auto-select first if nothing selected
+  if(!html) html = '<div class="empty" style="padding:1rem;font-size:.78rem">No channels available.</div>';
+  el.innerHTML = html;
   if(!_activeChannel){
-    if(deals.length) selectChannel('deal',deals[0].name,'');
-    else if(myGroups.length) selectChannel('group','',myGroups[0].id);
+    if(deals.length) selectChannel('deal', deals[0].name, '');
+    else if(myGroups.length) selectChannel('group', '', myGroups[0].id);
   }
 }
 
-async function selectChannel(type,dealKey,groupId){
-  _activeChannel={type,key:dealKey,id:groupId};
-  // Update list highlight
+async function selectChannel(type, dealKey, groupId){
+  _activeChannel = {type, key:dealKey, id:groupId};
   document.querySelectorAll('#chatChannelList .dl-item').forEach(el=>{
-    if(type==='deal') el.classList.toggle('active',el.dataset.type==='deal'&&el.dataset.key===dealKey);
-    else el.classList.toggle('active',el.dataset.type==='group'&&el.dataset.key===groupId);
+    if(type==='deal') el.classList.toggle('active', el.dataset.type==='deal' && el.dataset.key===dealKey);
+    else el.classList.toggle('active', el.dataset.type==='group' && el.dataset.key===groupId);
   });
-  const titleEl=document.getElementById('activeChatTitle');
-  const typeEl=document.getElementById('activeChatType');
+  const titleEl = document.getElementById('activeChatTitle');
+  const typeEl  = document.getElementById('activeChatType');
   if(type==='deal'){
-    titleEl.textContent=dealKey;
-    typeEl.textContent='Deal Room';
+    titleEl.textContent = dealKey;
+    typeEl.textContent  = 'Deal Room';
   } else {
-    const g=_groups.find(g=>g.id===groupId);
-    titleEl.textContent=g?.name||groupId;
-    typeEl.textContent='Group Channel';
+    const g = _groups.find(g=>g.id===groupId);
+    titleEl.textContent = g?.name || groupId;
+    typeEl.textContent  = 'Group Channel';
   }
-  document.getElementById('chatSend').disabled=false;
+  document.getElementById('chatSend').disabled = false;
   clearInterval(_chatPollTimer);
   await loadActiveChat();
-  _chatPollTimer=setInterval(loadActiveChat,6000);
+  _chatPollTimer = setInterval(loadActiveChat, 6000);
 }
 
 async function loadActiveChat(){
@@ -1184,130 +1213,158 @@ async function loadActiveChat(){
   try{
     let res;
     if(_activeChannel.type==='deal'){
-      res=await workerFetch(`/chats/deal/${encodeURIComponent(_activeChannel.key)}`);
+      res = await workerFetch(`/chats/deal/${encodeURIComponent(_activeChannel.key)}`);
     } else {
-      res=await workerFetch(`/groups/${_activeChannel.id}/chat`);
+      res = await workerFetch(`/groups/${_activeChannel.id}/chat`);
     }
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    const messages=await res.json();
+    const messages = await res.json();
     renderChatMessages(messages);
-  }catch(e){console.error('Chat load error',e);}
+  }catch(e){ console.error('Chat load error:', e); }
 }
 
 function renderChatMessages(messages){
-  const el=document.getElementById('chatMessages');
-  const countEl=document.getElementById('activeChatCount');
-  if(countEl) countEl.textContent=`${messages.length} msg${messages.length!==1?'s':''}`;
+  const el = document.getElementById('chatMessages');
+  const countEl = document.getElementById('activeChatCount');
+  if(countEl) countEl.textContent = `${messages.length} msg${messages.length!==1?'s':''}`;
   if(!messages.length){el.innerHTML='<div class="chat-empty">No messages yet. Start the conversation.</div>';return;}
-  const wasAtBottom=el.scrollTop+el.clientHeight>=el.scrollHeight-20;
-  el.innerHTML=messages.map(m=>`<div class="chat-msg-row">
-    <div class="chat-msg-meta"><span class="chat-msg-name">${esc(m.name)}</span><span>${new Date(m.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span></div>
+  const wasAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+  el.innerHTML = messages.map(m=>`<div class="chat-msg-row">
+    <div class="chat-msg-meta">
+      <span class="chat-msg-name">${esc(m.name)}</span>
+      <span>${new Date(m.created_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</span>
+    </div>
     <div class="chat-msg-bubble${m.uid===_U?.uid?' own':''}">${esc(m.text).replace(/\n/g,'<br/>')}</div>
   </div>`).join('');
-  if(wasAtBottom) el.scrollTop=el.scrollHeight;
+  if(wasAtBottom) el.scrollTop = el.scrollHeight;
 }
 
-function chatKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+function chatKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();} }
 
 async function sendChat(){
-  if(!_activeChannel||!_U) return;
-  const input=document.getElementById('chatInput');
-  const text=input.value.trim();
+  if(!_activeChannel || !_U) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
   if(!text) return;
-  input.value='';
+  input.value = '';
   try{
+    const body = JSON.stringify({uid:_U.uid, name:_U.name, text});
     let res;
-    const body=JSON.stringify({uid:_U.uid,name:_U.name,text});
     if(_activeChannel.type==='deal'){
-      res=await workerFetch(`/chats/deal/${encodeURIComponent(_activeChannel.key)}`,{method:'POST',body});
+      res = await workerFetch(`/chats/deal/${encodeURIComponent(_activeChannel.key)}`, {method:'POST', body});
     } else {
-      res=await workerFetch(`/groups/${_activeChannel.id}/chat`,{method:'POST',body});
+      res = await workerFetch(`/groups/${_activeChannel.id}/chat`, {method:'POST', body});
     }
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     await loadActiveChat();
     logAct(`Sent message in ${_activeChannel.type==='deal'?'deal: '+_activeChannel.key:'group channel'}`);
-  }catch(e){toast('Failed to send','err');}
+  }catch(e){ toast('Failed to send', 'err'); }
 }
 
 /* ══════════════════════════════════════════════
    AI ASSISTANT
 ══════════════════════════════════════════════ */
-function aiKeydown(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();}}
+function aiKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 
 async function sendAI(){
-  const input=document.getElementById('aiInput');
-  const text=input.value.trim();
-  if(!text||!_U) return;
-  const btn=document.getElementById('aiSendBtn');
-  btn.disabled=true;input.value='';
-  appendAIMsg('user',text);
-  _aiHistory.push({role:'user',content:text});
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if(!text || !_U) return;
+  const btn = document.getElementById('aiSendBtn');
+  btn.disabled = true;
+  input.value = '';
+  appendAIMsg('user', text);
+  _aiHistory.push({role:'user', content:text});
   document.getElementById('aiTyping').classList.add('show');
   scrollAI();
   try{
-    const memberContext=`Name: ${_U.name}\nDivision: ${_U.division}\nTier: ${TIER_LABELS[_U.tier]}\nActive Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}\nAdmin: ${_U.isAdmin?'Yes':'No'}`;
-    const res=await workerFetch('/ai',{
-      method:'POST',
-      body:JSON.stringify({messages:_aiHistory.slice(-20),member_context:memberContext,max_tokens:512})
+    const memberContext = `Name: ${_U.name}\nDivision: ${_U.division}\nTier: ${TIER_LABELS[_U.tier]}\nActive Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}\nAdmin: ${_U.isAdmin?'Yes':'No'}`;
+    const res = await workerFetch('/ai', {
+      method: 'POST',
+      body: JSON.stringify({messages:_aiHistory.slice(-20), member_context:memberContext, max_tokens:512})
     });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     document.getElementById('aiTyping').classList.remove('show');
-    const botDiv=appendAIMsg('lvo','');
-    const reader=res.body.getReader();const decoder=new TextDecoder();let full='';
+    const botDiv = appendAIMsg('lvo', '');
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let full = '';
     while(true){
-      const{done,value}=await reader.read();if(done)break;
-      const chunk=decoder.decode(value,{stream:true});
-      const lines=chunk.split('\n').filter(l=>l.startsWith('data: '));
+      const{done,value} = await reader.read();
+      if(done) break;
+      const chunk = decoder.decode(value,{stream:true});
+      const lines = chunk.split('\n').filter(l=>l.startsWith('data: '));
       for(const line of lines){
-        const data=line.slice(6).trim();if(data==='[DONE]')break;
-        try{const json=JSON.parse(data);const delta=json.choices?.[0]?.delta?.content||json.delta?.text||'';full+=delta;botDiv.querySelector('.ai-bubble').innerHTML=esc(full).replace(/\n/g,'<br/>');scrollAI();}catch(_){}
+        const data = line.slice(6).trim();
+        if(data==='[DONE]') break;
+        try{
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content || json.delta?.text || '';
+          full += delta;
+          botDiv.querySelector('.ai-bubble').innerHTML = esc(full).replace(/\n/g,'<br/>');
+          scrollAI();
+        }catch(_){}
       }
     }
-    _aiHistory.push({role:'assistant',content:full});
+    _aiHistory.push({role:'assistant', content:full});
   }catch(e){
     document.getElementById('aiTyping').classList.remove('show');
-    appendAIMsg('lvo','Connection failed. Try again.');
+    appendAIMsg('lvo', 'Connection failed. Try again.');
+    console.error('AI error:', e);
   }
-  btn.disabled=false;scrollAI();
+  btn.disabled = false;
+  scrollAI();
 }
 
-function appendAIMsg(role,text){
-  const feed=document.getElementById('aiMessages');
-  const label=role==='user'?(_U?.name||'You'):'The LVO';
-  const div=document.createElement('div');
-  div.className='ai-msg '+role;
-  div.innerHTML=`<span class="ai-meta">${esc(label)}</span><div class="ai-bubble">${esc(text).replace(/\n/g,'<br/>')}</div>`;
-  feed.appendChild(div);return div;
+function appendAIMsg(role, text){
+  const feed = document.getElementById('aiMessages');
+  const label = role==='user' ? (_U?.name||'You') : 'The LVO';
+  const div = document.createElement('div');
+  div.className = 'ai-msg ' + role;
+  div.innerHTML = `<span class="ai-meta">${esc(label)}</span><div class="ai-bubble">${esc(text).replace(/\n/g,'<br/>')}</div>`;
+  feed.appendChild(div);
+  return div;
 }
-function scrollAI(){const f=document.getElementById('aiMessages');f.scrollTop=f.scrollHeight;}
+
+function scrollAI(){
+  const f = document.getElementById('aiMessages');
+  f.scrollTop = f.scrollHeight;
+}
 
 /* ══════════════════════════════════════════════
    ACTIVITY LOG
 ══════════════════════════════════════════════ */
 function renderAct(){
-  const render=el=>{
+  const render = el => {
     if(!el) return;
     if(!_activity.length){el.innerHTML='<div class="empty">No activity yet.</div>';return;}
-    el.innerHTML=_activity.slice(0,12).map(a=>`<div class="act-item">
+    el.innerHTML = _activity.slice(0,12).map(a=>`<div class="act-item">
       <div class="act-dot${a.isAdmin?' gold':''}"></div>
-      <div><div class="act-time">${new Date(a.time).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</div><div class="act-txt">${esc(a.action)}</div></div>
+      <div>
+        <div class="act-time">${new Date(a.time).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</div>
+        <div class="act-txt">${esc(a.action)}</div>
+      </div>
     </div>`).join('');
   };
   render(document.getElementById('actList'));
 }
 
 async function loadAdminActivity(){
-  const el=document.getElementById('admFeed');
+  const el = document.getElementById('admFeed');
   if(!el) return;
   try{
-    const res=await adminFetch('/activity');
-    const log=await res.json();
+    const res = await adminFetch('/activity');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const log = await res.json();
     if(!log.length){el.innerHTML='<div class="empty">No activity.</div>';return;}
-    el.innerHTML=log.slice(0,40).map(a=>`<div class="act-item">
+    el.innerHTML = log.slice(0,40).map(a=>`<div class="act-item">
       <div class="act-dot${a.isAdminAction?' gold':''}"></div>
-      <div><div class="act-time">${new Date(a.time).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</div><div class="act-txt">${esc(a.action)}${a.actor?' · '+esc(a.actor):''}</div></div>
+      <div>
+        <div class="act-time">${new Date(a.time).toLocaleString('en-US',{dateStyle:'medium',timeStyle:'short'})}</div>
+        <div class="act-txt">${esc(a.action)}${a.actor?' · '+esc(a.actor):''}</div>
+      </div>
     </div>`).join('');
-  }catch(e){el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`;}
+  }catch(e){ el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`; }
 }
 
 /* ══════════════════════════════════════════════
@@ -1318,20 +1375,21 @@ function initAdminPanel(){
   loadAdminAnn();
   loadAdminMembers();
   if(document.getElementById('admMyTier'))
-    document.getElementById('admMyTier').textContent=TIER_LABELS[_U.tier]||TIER_LABELS[4];
+    document.getElementById('admMyTier').textContent = TIER_LABELS[_U.tier] || TIER_LABELS[4];
   setupAnnPreview();
 }
 
 /* ── ADMIN: ANNOUNCEMENTS ── */
 async function loadAdminAnn(){
-  const el=document.getElementById('admAnnList');
-  el.innerHTML='<div class="empty" style="padding:1.5rem">Loading…</div>';
+  const el = document.getElementById('admAnnList');
+  el.innerHTML = '<div class="empty" style="padding:1.5rem">Loading…</div>';
   try{
-    const res=await adminFetch('/announcements');
-    const list=await res.json();
-    document.getElementById('admAnnCount').textContent=list.length;
+    const res = await adminFetch('/announcements');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const list = await res.json();
+    document.getElementById('admAnnCount').textContent = list.length;
     if(!list.length){el.innerHTML='<div class="empty" style="padding:1.5rem">No announcements yet.</div>';return;}
-    el.innerHTML=list.map(a=>`<div class="adm-ann${a.pinned?' pinned':''}">
+    el.innerHTML = list.map(a=>`<div class="adm-ann${a.pinned?' pinned':''}">
       <div class="adm-ann-info">
         <div class="adm-ann-title">${a.pinned?'◈ ':''}<span>${esc(a.title)}</span></div>
         <div class="adm-ann-meta">${esc(a.division)} · ${esc(a.author)} · ${new Date(a.created_at).toLocaleDateString('en-US',{dateStyle:'medium'})}</div>
@@ -1341,96 +1399,114 @@ async function loadAdminAnn(){
         <button class="btn xs danger" onclick="deleteAnn('${a.id}')">Delete</button>
       </div>
     </div>`).join('');
-  }catch(e){el.innerHTML=`<div class="empty err" style="padding:1.5rem;color:var(--red)">Error: ${esc(e.message)}</div>`;}
+  }catch(e){ el.innerHTML=`<div class="empty" style="padding:1.5rem;color:var(--red)">Error: ${esc(e.message)}</div>`; }
 }
 
 async function postAnnouncement(){
-  const title=document.getElementById('annTitle').value.trim();
-  const body=document.getElementById('annBody').value.trim();
-  const division=document.getElementById('annDivision').value;
-  const author=document.getElementById('annAuthor').value.trim()||_U?.name||'LVO Administration';
-  if(!title||!body){toast('Title and body required','err');return;}
+  const title    = document.getElementById('annTitle').value.trim();
+  const body     = document.getElementById('annBody').value.trim();
+  const division = document.getElementById('annDivision').value;
+  const author   = document.getElementById('annAuthor').value.trim() || _U?.name || 'LVO Administration';
+  if(!title || !body){toast('Title and body required','err');return;}
   try{
-    const res=await adminFetch('/announcements',{method:'POST',body:JSON.stringify({title,body,division,author})});
+    const res = await adminFetch('/announcements', {
+      method: 'POST',
+      body: JSON.stringify({title, body, division, author})
+    });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    document.getElementById('annTitle').value='';
-    document.getElementById('annBody').value='';
-    toast('Announcement posted','ok');
-    logAct(`Posted announcement: "${title}"`,true);
-    await fetchAnn();await loadAdminAnn();
-  }catch(e){toast('Failed to post: '+e.message,'err');}
+    document.getElementById('annTitle').value = '';
+    document.getElementById('annBody').value  = '';
+    toast('Announcement posted', 'ok');
+    logAct(`Posted announcement: "${title}"`, true);
+    await fetchAnn();
+    await loadAdminAnn();
+  }catch(e){ toast('Failed to post: '+e.message, 'err'); }
 }
 
-async function toggleGlobalPin(id,pin){
+async function toggleGlobalPin(id, pin){
   try{
-    await adminFetch(`/announcements/${id}/pin`,{method:'PUT',body:JSON.stringify({pinned:pin})});
-    toast(pin?'◈ Globally pinned':'Unpinned globally','ok');
-    logAct(`${pin?'Globally pinned':'Unpinned'} an announcement`,true);
-    await fetchAnn();await loadAdminAnn();
-  }catch(e){toast('Failed','err');}
+    const res = await adminFetch(`/announcements/${id}/pin`, {
+      method: 'PUT',
+      body: JSON.stringify({pinned:pin})
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast(pin ? '◈ Globally pinned' : 'Unpinned globally', 'ok');
+    logAct(`${pin?'Globally pinned':'Unpinned'} an announcement`, true);
+    await fetchAnn();
+    await loadAdminAnn();
+  }catch(e){ toast('Failed', 'err'); }
 }
 
 async function deleteAnn(id){
   if(!confirm('Delete this announcement?')) return;
   try{
-    await adminFetch(`/announcements/${id}`,{method:'DELETE'});
-    toast('Deleted','ok');
-    logAct('Deleted an announcement',true);
-    // Also remove local pin if exists
+    const res = await adminFetch(`/announcements/${id}`, {method:'DELETE'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Deleted', 'ok');
+    logAct('Deleted an announcement', true);
     if(_localPins[id]){delete _localPins[id];saveLocalPins();}
-    await fetchAnn();await loadAdminAnn();
-  }catch(e){toast('Failed','err');}
+    await fetchAnn();
+    await loadAdminAnn();
+  }catch(e){ toast('Failed', 'err'); }
 }
 
 function setupAnnPreview(){
-  const update=()=>{
-    const title=document.getElementById('annTitle')?.value||'';
-    const body=document.getElementById('annBody')?.value||'';
-    const div=document.getElementById('annDivision')?.value||'Alliance';
-    const author=document.getElementById('annAuthor')?.value||_U?.name||'LVO Administration';
-    const el=document.getElementById('annPreview');if(!el)return;
-    if(!title&&!body){el.innerHTML='<div class="ann-body" style="color:var(--dim)">Fill in the form to preview your announcement.</div>';return;}
-    el.innerHTML=`<div class="ann">
+  const update = () => {
+    const title  = document.getElementById('annTitle')?.value || '';
+    const body   = document.getElementById('annBody')?.value  || '';
+    const div    = document.getElementById('annDivision')?.value || 'Alliance';
+    const author = document.getElementById('annAuthor')?.value  || _U?.name || 'LVO Administration';
+    const el = document.getElementById('annPreview');
+    if(!el) return;
+    if(!title && !body){
+      el.innerHTML='<div class="ann-body" style="color:var(--dim)">Fill in the form to preview your announcement.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="ann">
       <div class="ann-hd"><span class="ann-title">${esc(title)||'Untitled'}</span><span class="ann-div">${esc(div)}</span></div>
       ${body?`<div class="ann-body">${esc(body)}</div>`:''}
       <div class="ann-ft"><span class="ann-author">${esc(author)}</span><span class="ann-time">· Just now</span></div>
     </div>`;
   };
   ['annTitle','annBody','annDivision','annAuthor'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.addEventListener('input',update);
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', update);
   });
 }
 
 /* ── ADMIN: MEMBERS ── */
 async function loadAdminMembers(){
-  const el=document.getElementById('admList');
-  el.innerHTML='<div class="empty">Loading…</div>';
+  const el = document.getElementById('admList');
+  el.innerHTML = '<div class="empty">Loading…</div>';
   try{
-    const res=await adminFetch('/members');
-    _members=await res.json();
-    document.getElementById('admTotal').textContent=_members.length;
+    const res = await adminFetch('/members');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    _members = await res.json();
+    document.getElementById('admTotal').textContent = _members.length;
     renderMemberList(_members);
-    // Also populate group member picker if groups tab is open
     renderGroupMemberPicker();
-  }catch(e){el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`;}
+  }catch(e){ el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`; }
 }
 
 function filterMembers(){
-  const q=document.getElementById('memberSearch')?.value?.toLowerCase()||'';
-  renderMemberList(q?_members.filter(m=>(m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)):_members);
+  const q = document.getElementById('memberSearch')?.value?.toLowerCase() || '';
+  renderMemberList(q ? _members.filter(m=>(m.name||'').toLowerCase().includes(q)||(m.email||'').toLowerCase().includes(q)) : _members);
 }
 
 function renderMemberList(list){
-  const el=document.getElementById('admList');
-  const countEl=document.getElementById('memberCount');
-  if(countEl) countEl.textContent=`${list.length} member${list.length!==1?'s':''}`;
+  const el = document.getElementById('admList');
+  const countEl = document.getElementById('memberCount');
+  if(countEl) countEl.textContent = `${list.length} member${list.length!==1?'s':''}`;
   if(!list.length){el.innerHTML='<div class="empty">No members found.</div>';return;}
-  el.innerHTML=list.map(m=>{
-    const tv=parseInt(m.tier)||4;
-    const safeUid=m.uid||'';
-    const safeName=esc(m.name||'Unknown');
-    return`<div class="member-row" id="mr-${safeUid}">
-      <div><div class="member-name">${safeName}</div><div class="member-email">${esc(m.email||'')} · ${esc(m.division||'—')}</div></div>
+  el.innerHTML = list.map(m=>{
+    const tv = parseInt(m.tier) || 4;
+    const safeUid  = m.uid || '';
+    const safeName = esc(m.name || 'Unknown');
+    return `<div class="member-row" id="mr-${safeUid}">
+      <div>
+        <div class="member-name">${safeName}</div>
+        <div class="member-email">${esc(m.email||'')} · ${esc(m.division||'—')}</div>
+      </div>
       <select id="ts-${safeUid}" style="background:var(--bg2);border:.5px solid var(--border);color:var(--purple);font-family:'Cinzel',serif;font-size:.4rem;letter-spacing:.12em;padding:.42rem .65rem;cursor:pointer;outline:none;width:100%" ${safeUid===_U?.uid?'disabled':''}>
         <option value="1" ${tv===1?'selected':''}>Tier I</option>
         <option value="2" ${tv===2?'selected':''}>Tier II</option>
@@ -1442,37 +1518,51 @@ function renderMemberList(list){
   }).join('');
 }
 
-async function saveTier(uid,memberName){
-  const sel=document.getElementById('ts-'+uid);if(!sel)return;
-  const newTier=parseInt(sel.value);
+async function saveTier(uid, memberName){
+  const sel = document.getElementById('ts-'+uid);
+  if(!sel) return;
+  const newTier = parseInt(sel.value);
   try{
-    await adminFetch(`/members/${uid}`,{method:'PUT',body:JSON.stringify({tier:newTier})});
-    const btn=document.querySelector(`#mr-${uid} .btn`);
-    if(btn){btn.textContent='Saved ✓';btn.style.color='var(--green)';setTimeout(()=>{btn.textContent='Save';btn.style.color='';},2200);}
-    toast(`${memberName} → ${TIER_LABELS[newTier]}`,'ok');
-    logAct(`Updated ${memberName}'s tier to ${TIER_LABELS[newTier]}`,true);
-    document.getElementById('admTotal').textContent=_members.length;
-  }catch(e){toast('Failed to save','err');}
+    const res = await adminFetch(`/members/${uid}`, {
+      method: 'PUT',
+      body: JSON.stringify({tier:newTier})
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const btn = document.querySelector(`#mr-${uid} .btn`);
+    if(btn){
+      btn.textContent = 'Saved ✓';
+      btn.style.color = 'var(--green)';
+      setTimeout(()=>{btn.textContent='Save';btn.style.color='';},2200);
+    }
+    toast(`${memberName} → ${TIER_LABELS[newTier]}`, 'ok');
+    logAct(`Updated ${memberName}'s tier to ${TIER_LABELS[newTier]}`, true);
+    document.getElementById('admTotal').textContent = _members.length;
+  }catch(e){ toast('Failed to save', 'err'); }
 }
 
 /* ── ADMIN: GROUPS ── */
 function renderGroupMemberPicker(){
-  const el=document.getElementById('grpMemberList');if(!el)return;
+  const el = document.getElementById('grpMemberList');
+  if(!el) return;
   if(!_members.length){el.innerHTML='<div class="empty" style="padding:.5rem;font-size:.78rem">No members loaded yet.</div>';return;}
-  el.innerHTML=_members.map(m=>`<label class="gm-check">
+  el.innerHTML = _members.map(m=>`<label class="gm-check">
     <input type="checkbox" value="${esc(m.uid||'')}" checked/>
-    <div><div class="gm-check-lbl">${esc(m.name||'Unknown')}</div><div class="gm-check-sub">${esc(m.email||'')} · ${TIER_LABELS[parseInt(m.tier)||4]}</div></div>
+    <div>
+      <div class="gm-check-lbl">${esc(m.name||'Unknown')}</div>
+      <div class="gm-check-sub">${esc(m.email||'')} · ${TIER_LABELS[parseInt(m.tier)||4]}</div>
+    </div>
   </label>`).join('');
 }
 
 async function loadAdminGroups(){
-  const el=document.getElementById('admGroupList');
-  el.innerHTML='<div class="empty">Loading…</div>';
+  const el = document.getElementById('admGroupList');
+  el.innerHTML = '<div class="empty">Loading…</div>';
   try{
-    const res=await workerFetch('/groups');
-    _groups=await res.json();
+    const res = await workerFetch('/groups');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    _groups = await res.json();
     if(!_groups.length){el.innerHTML='<div class="empty">No groups created yet.</div>';return;}
-    el.innerHTML=_groups.map(g=>`<div class="group-row">
+    el.innerHTML = _groups.map(g=>`<div class="group-row">
       <div class="group-row-info">
         <div class="group-row-name">${esc(g.name)}</div>
         ${g.description?`<div class="group-row-desc">${esc(g.description)}</div>`:''}
@@ -1482,125 +1572,136 @@ async function loadAdminGroups(){
         <button class="btn xs danger" onclick="deleteGroup('${g.id}','${esc(g.name)}')">Delete</button>
       </div>
     </div>`).join('');
-  }catch(e){el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`;}
+  }catch(e){ el.innerHTML=`<div class="empty" style="color:var(--red)">Error: ${esc(e.message)}</div>`; }
   renderGroupMemberPicker();
 }
 
 async function createGroup(){
-  const name=document.getElementById('grpName')?.value.trim();
-  const description=document.getElementById('grpDesc')?.value.trim()||'';
-  const tier_min=parseInt(document.getElementById('grpTier')?.value)||4;
+  const name        = document.getElementById('grpName')?.value.trim();
+  const description = document.getElementById('grpDesc')?.value.trim() || '';
+  const tier_min    = parseInt(document.getElementById('grpTier')?.value) || 4;
   if(!name){toast('Group name required','err');return;}
-  // Collect checked members
-  const checked=[...document.querySelectorAll('#grpMemberList input:checked')].map(i=>i.value).filter(Boolean);
-  const allChecked=checked.length===_members.length; // if all checked, treat as tier-based
-  const memberUids=allChecked?[]:checked;
+  const checked = [...document.querySelectorAll('#grpMemberList input:checked')].map(i=>i.value).filter(Boolean);
+  const allChecked = checked.length === _members.length;
+  const memberUids = allChecked ? [] : checked;
   try{
-    const res=await adminFetch('/groups',{method:'POST',body:JSON.stringify({name,description,tier_min,memberUids})});
+    const res = await adminFetch('/groups', {
+      method: 'POST',
+      body: JSON.stringify({name, description, tier_min, memberUids})
+    });
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    toast(`Group "${name}" created`,'ok');
-    logAct(`Created group: "${name}"`,true);
-    document.getElementById('grpName').value='';
-    document.getElementById('grpDesc').value='';
+    toast(`Group "${name}" created`, 'ok');
+    logAct(`Created group: "${name}"`, true);
+    document.getElementById('grpName').value = '';
+    document.getElementById('grpDesc').value = '';
     await loadAdminGroups();
-    // Refresh channel list if chats panel is open
-    _groups=_groups; // already updated via loadAdminGroups
     if(document.getElementById('p-chats').classList.contains('active')) renderChannelList();
-  }catch(e){toast('Failed: '+e.message,'err');}
+  }catch(e){ toast('Failed: '+e.message, 'err'); }
 }
 
-async function deleteGroup(id,name){
+async function deleteGroup(id, name){
   if(!confirm(`Delete group "${name}" and its chat history?`)) return;
   try{
-    await adminFetch(`/groups/${id}`,{method:'DELETE'});
-    toast('Group deleted','ok');
-    logAct(`Deleted group: "${name}"`,true);
-    if(_activeChannel?.type==='group'&&_activeChannel?.id===id) _activeChannel=null;
+    const res = await adminFetch(`/groups/${id}`, {method:'DELETE'});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Group deleted', 'ok');
+    logAct(`Deleted group: "${name}"`, true);
+    if(_activeChannel?.type==='group' && _activeChannel?.id===id) _activeChannel = null;
     await loadAdminGroups();
     if(document.getElementById('p-chats').classList.contains('active')) initChatsPanel();
-  }catch(e){toast('Failed','err');}
+  }catch(e){ toast('Failed', 'err'); }
 }
 
 /* ── ADMIN: CHATS (moderation) ── */
-function switchAdmChat(type,btn){
-  _admChatType=type;
+function switchAdmChat(type, btn){
+  _admChatType = type;
   document.querySelectorAll('#adm-chats .fb').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('admChatListHeader').textContent=type==='deals'?'Deal Chats':'Group Chats';
-  document.getElementById('admChatMessages').innerHTML='<div class="chat-empty">Select a chat to moderate.</div>';
-  document.getElementById('admChatTitle').textContent='Select a chat';
-  document.getElementById('admChatCount').textContent='';
+  document.getElementById('admChatListHeader').textContent = type==='deals' ? 'Deal Chats' : 'Group Chats';
+  document.getElementById('admChatMessages').innerHTML = '<div class="chat-empty">Select a chat to moderate.</div>';
+  document.getElementById('admChatTitle').textContent  = 'Select a chat';
+  document.getElementById('admChatCount').textContent  = '';
   loadAdminChatList();
 }
 
 async function loadAdminChatList(){
-  const el=document.getElementById('admChatList');
-  el.innerHTML='<div class="empty" style="padding:1rem">Loading…</div>';
+  const el = document.getElementById('admChatList');
+  el.innerHTML = '<div class="empty" style="padding:1rem">Loading…</div>';
   try{
     if(_admChatType==='deals'){
-      const res=await adminFetch('/chats');
-      const deals=await res.json();
+      const res = await adminFetch('/chats');
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const deals = await res.json();
       if(!deals.length){el.innerHTML='<div class="empty" style="padding:1rem">No deal chats yet.</div>';return;}
-      el.innerHTML=deals.map(d=>`<div class="dl-item" onclick="selectAdminChat('deal','${esc(d)}','')" data-key="${esc(d)}">
+      el.innerHTML = deals.map(d=>`<div class="dl-item" onclick="selectAdminChat('deal','${esc(d)}','')" data-key="${esc(d)}">
         <div class="dl-item-name">${esc(d)}</div>
         <div class="dl-item-type">Deal Room</div>
       </div>`).join('');
     } else {
-      const res=await workerFetch('/groups');
-      const groups=await res.json();
+      const res = await workerFetch('/groups');
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const groups = await res.json();
       if(!groups.length){el.innerHTML='<div class="empty" style="padding:1rem">No group chats yet.</div>';return;}
-      el.innerHTML=groups.map(g=>`<div class="dl-item" onclick="selectAdminChat('group','','${esc(g.id)}')" data-key="${esc(g.id)}">
+      el.innerHTML = groups.map(g=>`<div class="dl-item" onclick="selectAdminChat('group','','${esc(g.id)}')" data-key="${esc(g.id)}">
         <div class="dl-item-name">${esc(g.name)}</div>
         <div class="dl-item-type">Group Channel</div>
       </div>`).join('');
     }
-  }catch(e){el.innerHTML=`<div class="empty" style="padding:1rem;color:var(--red)">Error: ${esc(e.message)}</div>`;}
+  }catch(e){ el.innerHTML=`<div class="empty" style="padding:1rem;color:var(--red)">Error: ${esc(e.message)}</div>`; }
 }
 
-async function selectAdminChat(type,dealKey,groupId){
+async function selectAdminChat(type, dealKey, groupId){
   document.querySelectorAll('#admChatList .dl-item').forEach(el=>{
-    const k=type==='deal'?dealKey:groupId;
-    el.classList.toggle('active',el.dataset.key===k);
+    const k = type==='deal' ? dealKey : groupId;
+    el.classList.toggle('active', el.dataset.key===k);
   });
-  const label=type==='deal'?dealKey:(_groups.find(g=>g.id===groupId)?.name||groupId);
-  document.getElementById('admChatTitle').textContent=label;
-  const el=document.getElementById('admChatMessages');
-  el.innerHTML='<div class="chat-empty">Loading…</div>';
+  const label = type==='deal' ? dealKey : (_groups.find(g=>g.id===groupId)?.name||groupId);
+  document.getElementById('admChatTitle').textContent = label;
+  const el = document.getElementById('admChatMessages');
+  el.innerHTML = '<div class="chat-empty">Loading…</div>';
   try{
     let res;
-    if(type==='deal') res=await adminFetch(`/chats/deal/${encodeURIComponent(dealKey)}`);
-    else res=await adminFetch(`/groups/${groupId}/chat`);
-    const messages=await res.json();
-    document.getElementById('admChatCount').textContent=`${messages.length} messages`;
+    if(type==='deal') res = await adminFetch(`/chats/deal/${encodeURIComponent(dealKey)}`);
+    else res = await adminFetch(`/groups/${groupId}/chat`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const messages = await res.json();
+    document.getElementById('admChatCount').textContent = `${messages.length} messages`;
     if(!messages.length){el.innerHTML='<div class="chat-empty">No messages.</div>';return;}
-    el.innerHTML=messages.map(m=>`<div class="chat-msg-row" style="padding:.4rem 0">
-      <div class="chat-msg-meta"><span class="chat-msg-name">${esc(m.name)}</span><span>${new Date(m.created_at).toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'})}</span></div>
+    el.innerHTML = messages.map(m=>`<div class="chat-msg-row" style="padding:.4rem 0">
+      <div class="chat-msg-meta">
+        <span class="chat-msg-name">${esc(m.name)}</span>
+        <span>${new Date(m.created_at).toLocaleString('en-US',{dateStyle:'short',timeStyle:'short'})}</span>
+      </div>
       <div style="display:flex;align-items:flex-start;gap:.5rem">
         <div class="chat-msg-bubble">${esc(m.text).replace(/\n/g,'<br/>')}</div>
         <button class="btn xs danger" onclick="adminDeleteMsg('${type}','${esc(dealKey)}','${esc(groupId)}','${m.id}')">✕</button>
       </div>
     </div>`).join('');
-    el.scrollTop=el.scrollHeight;
-  }catch(e){el.innerHTML=`<div class="chat-empty" style="color:var(--red)">Error loading.</div>`;}
+    el.scrollTop = el.scrollHeight;
+  }catch(e){ el.innerHTML='<div class="chat-empty" style="color:var(--red)">Error loading.</div>'; }
 }
 
-async function adminDeleteMsg(type,dealKey,groupId,msgId){
+async function adminDeleteMsg(type, dealKey, groupId, msgId){
   try{
     let res;
-    if(type==='deal') res=await adminFetch(`/chats/deal/${encodeURIComponent(dealKey)}/messages/${msgId}`,{method:'DELETE'});
-    else res=await adminFetch(`/groups/${groupId}/chat/${msgId}`,{method:'DELETE'});
+    if(type==='deal') res = await adminFetch(`/chats/deal/${encodeURIComponent(dealKey)}/messages/${msgId}`, {method:'DELETE'});
+    else res = await adminFetch(`/groups/${groupId}/chat/${msgId}`, {method:'DELETE'});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
-    toast('Message deleted','ok');
-    logAct(`Deleted a message from ${type==='deal'?'deal: '+dealKey:'group chat'}`,true);
-    selectAdminChat(type,dealKey,groupId);
-  }catch(e){toast('Failed','err');}
+    toast('Message deleted', 'ok');
+    logAct(`Deleted a message from ${type==='deal'?'deal: '+dealKey:'group chat'}`, true);
+    selectAdminChat(type, dealKey, groupId);
+  }catch(e){ toast('Failed', 'err'); }
 }
 
 /* ══════════════════════════════════════════════
    CLERK APPEARANCE
 ══════════════════════════════════════════════ */
-const APPEARANCE={
-  variables:{colorBackground:'#080808',colorText:'#F0EEEC',colorPrimary:'#7F77DD',colorInputBackground:'transparent',colorInputText:'#F0EEEC',borderRadius:'0px',fontFamily:"'Cormorant Garamond',Georgia,serif"},
+const APPEARANCE = {
+  variables:{
+    colorBackground:'#080808',colorText:'#F0EEEC',colorPrimary:'#7F77DD',
+    colorInputBackground:'transparent',colorInputText:'#F0EEEC',
+    borderRadius:'0px',fontFamily:"'Cormorant Garamond',Georgia,serif"
+  },
   elements:{
     card:{background:'transparent',border:'.5px solid rgba(127,119,221,.25)',boxShadow:'none',borderRadius:'0'},
     headerTitle:{fontFamily:"'Cinzel',serif",letterSpacing:'.2em',color:'#C8C8D0'},
@@ -1619,42 +1720,67 @@ const APPEARANCE={
 /* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
-window.addEventListener('load',async()=>{
+window.addEventListener('load', async () => {
   setLoad('Loading Clerk…');
-  let attempts=0;
-  while(typeof Clerk==='undefined'&&attempts<30){await new Promise(r=>setTimeout(r,200));attempts++;}
-  if(typeof Clerk==='undefined'){document.getElementById('loadStatus').textContent='Clerk failed to load.';return;}
-  try{setLoad('Authenticating…');await Clerk.load();}
-  catch(e){document.getElementById('loadStatus').textContent='Auth error: '+e.message;return;}
+  let attempts = 0;
+  while(typeof Clerk === 'undefined' && attempts < 30){
+    await new Promise(r=>setTimeout(r,200));
+    attempts++;
+  }
+  if(typeof Clerk === 'undefined'){
+    document.getElementById('loadStatus').textContent = 'Clerk failed to load.';
+    return;
+  }
+  try{
+    setLoad('Authenticating…');
+    await Clerk.load();
+  }catch(e){
+    document.getElementById('loadStatus').textContent = 'Auth error: '+e.message;
+    return;
+  }
 
   async function showDash(user){
     setLoad('Loading your profile…');
-    try{await user.reload();}catch(e){}
+    try{ await user.reload(); }catch(e){}
     setLoad('Connecting…');
-    try{Clerk.mountUserButton(document.getElementById('clerkBtn'),{appearance:APPEARANCE});}catch(e){}
+    try{ Clerk.mountUserButton(document.getElementById('clerkBtn'), {appearance:APPEARANCE}); }catch(e){}
     if(!_clerkProfileMounted){
-      try{Clerk.mountUserProfile(document.getElementById('clerkProfile'),{appearance:APPEARANCE});_clerkProfileMounted=true;}catch(e){}
+      try{
+        Clerk.mountUserProfile(document.getElementById('clerkProfile'), {appearance:APPEARANCE});
+        _clerkProfileMounted = true;
+      }catch(e){}
     }
     populateDash(user);
-    document.getElementById('topbar').style.display='flex';
-    document.getElementById('shell').style.display='flex';
-    const ls=document.getElementById('loadScreen');ls.classList.add('out');setTimeout(()=>ls.remove(),700);
+    document.getElementById('topbar').style.display = 'flex';
+    document.getElementById('shell').style.display  = 'flex';
+    const ls = document.getElementById('loadScreen');
+    ls.classList.add('out');
+    setTimeout(()=>ls.remove(), 700);
     await fetchAnn();
     startCountdown();
     logAct(`Signed in · ${user.fullName||user.firstName||'Member'}`);
-    setSbStatus(true,'Connected · Live');
+    setSbStatus(true, 'Connected · Live');
   }
 
-  if(Clerk.user){await showDash(Clerk.user);}
-  else{
+  if(Clerk.user){
+    await showDash(Clerk.user);
+  } else {
     setLoad('Checking session…');
     await new Promise(r=>setTimeout(r,1000));
-    if(Clerk.user){await showDash(Clerk.user);}
-    else{setLoad('Redirecting…');setTimeout(()=>{window.location.href='https://wearelvo.com';},800);}
+    if(Clerk.user){
+      await showDash(Clerk.user);
+    } else {
+      setLoad('Redirecting…');
+      setTimeout(()=>{ window.location.href='https://wearelvo.com'; }, 800);
+    }
   }
 
   Clerk.addListener(({user})=>{
-    if(!user){clearInterval(_annTimer);clearInterval(_chatPollTimer);window.location.href='https://wearelvo.com';}
+    if(!user){
+      clearInterval(_annTimer);
+      clearInterval(_chatPollTimer);
+      window.location.href = 'https://wearelvo.com';
+    }
   });
 });
 </script>
