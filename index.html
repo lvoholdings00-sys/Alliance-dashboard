@@ -823,12 +823,11 @@ function workerFetch(path, opts={}){
   return fetch(WORKER + path, {...opts, headers});
 }
 
-function adminFetch(path, opts={}){
-  // Send Clerk UID — worker checks it against ADMIN_UIDS whitelist
-  const uid = _U?.uid || '';
+function adminFetch(path, opts={}) {
+  const role = _U?.isAdmin ? 'admin' : '';
   return workerFetch(path, {
     ...opts,
-    headers: {...(opts.headers||{}), 'X-Clerk-UID': uid}
+    headers: {...(opts.headers||{}), 'X-Clerk-Role': role}
   });
 }
 
