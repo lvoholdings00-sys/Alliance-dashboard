@@ -759,9 +759,12 @@
 <script>
 /* ══════════════════════════════════════════════
    CONFIG
-   FIX 1: Updated worker URL to shadow-lvo
+   Two separate workers:
+   - WORKER     → lvo-worker  (all data: members, deals, chats, announcements, groups, activity)
+   - AI_WORKER  → shadow-lvo  (AI assistant only)
 ══════════════════════════════════════════════ */
-const WORKER = 'https://shadow-lvo.lvoholdings00.workers.dev';
+const WORKER    = 'https://lvo-worker.lvoholdings00.workers.dev';
+const AI_WORKER = 'https://shadow-lvo.lvoholdings00.workers.dev';
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -826,6 +829,12 @@ function adminFetch(path, opts={}) {
     ...opts,
     headers: {...(opts.headers||{}), 'X-Clerk-Role': role}
   });
+}
+
+/* AI fetch — always uses shadow-lvo */
+function aiFetch(path, opts={}){
+  const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+  return fetch(AI_WORKER + path, {...opts, headers});
 }
 
 /* ══════════════════════════════════════════════
@@ -923,7 +932,6 @@ function populateDash(user){
     document.getElementById('admMyTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
   document.getElementById('finMonth').textContent = new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
 
-  // FIX 3: AI card now lives in overview; show/hide it there
   const aiCard = document.getElementById('aiChatCard');
   if(aiCard) aiCard.style.display = (isAdmin || tier <= 3) ? 'block' : 'none';
 
@@ -931,7 +939,6 @@ function populateDash(user){
   renderFin(deals, tier, isAdmin);
   initChatsPanel();
 
-  // Register/update member in worker
   workerFetch('/members', {
     method: 'POST',
     body: JSON.stringify({uid:user.id, name, email, tier, division, role, joined:user.createdAt, deals})
@@ -1131,8 +1138,6 @@ function startCountdown(){
 
 /* ══════════════════════════════════════════════
    CHATS
-   FIX 2: Group channel onclick uses data attributes
-   instead of inline JSON.stringify to avoid quoting bugs
 ══════════════════════════════════════════════ */
 async function initChatsPanel(){
   if(!_U) return;
@@ -1162,7 +1167,6 @@ function renderChannelList(){
     html += '<div class="dl-section-label">Deal Rooms</div>';
     html += deals.map(d=>{
       const isActive = _activeChannel?.type==='deal' && _activeChannel?.key===d.name;
-      // Use data-type and data-key; handler reads from dataset
       return `<div class="dl-item${isActive?' active':''}" data-type="deal" data-key="${esc(d.name)}" onclick="handleChannelClick(this)">
         <div class="dl-item-name">${esc(d.name)}</div>
         <div class="dl-item-type">Deal Room</div>
@@ -1173,7 +1177,6 @@ function renderChannelList(){
     html += '<div class="dl-section-label">Group Channels</div>';
     html += myGroups.map(g=>{
       const isActive = _activeChannel?.type==='group' && _activeChannel?.id===g.id;
-      // FIX: store group id in data-gid attribute; no inline JS string interpolation of id
       return `<div class="dl-item${isActive?' active':''}" data-type="group" data-gid="${esc(g.id)}" onclick="handleChannelClick(this)">
         <div class="dl-item-name">${esc(g.name)}</div>
         <div class="dl-item-type">Group Channel</div>
@@ -1182,14 +1185,12 @@ function renderChannelList(){
   }
   if(!html) html = '<div class="empty" style="padding:1rem;font-size:.78rem">No channels available.</div>';
   el.innerHTML = html;
-  // Auto-select first channel if none active
   if(!_activeChannel){
     if(deals.length) selectChannel('deal', deals[0].name, '');
     else if(myGroups.length) selectChannel('group', '', myGroups[0].id);
   }
 }
 
-// FIX 2: Single dispatcher reads data attributes cleanly
 function handleChannelClick(el){
   const type = el.dataset.type;
   if(type === 'deal'){
@@ -1201,7 +1202,6 @@ function handleChannelClick(el){
 
 async function selectChannel(type, dealKey, groupId){
   _activeChannel = {type, key:dealKey, id:groupId};
-  // Update active state on list items
   document.querySelectorAll('#chatChannelList .dl-item').forEach(el=>{
     if(type==='deal'){
       el.classList.toggle('active', el.dataset.type==='deal' && el.dataset.key===dealKey);
@@ -1279,8 +1279,7 @@ async function sendChat(){
 }
 
 /* ══════════════════════════════════════════════
-   AI ASSISTANT
-   FIX 1: Uses WORKER constant (now shadow-lvo)
+   AI ASSISTANT — uses AI_WORKER (shadow-lvo)
 ══════════════════════════════════════════════ */
 function aiKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 
@@ -1297,7 +1296,7 @@ async function sendAI(){
   scrollAI();
   try{
     const memberContext = `Name: ${_U.name}\nDivision: ${_U.division}\nTier: ${TIER_LABELS[_U.tier]}\nActive Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}\nAdmin: ${_U.isAdmin?'Yes':'No'}`;
-    const res = await workerFetch('/ai', {
+    const res = await aiFetch('/ai', {
       method: 'POST',
       body: JSON.stringify({messages:_aiHistory.slice(-20), member_context:memberContext, max_tokens:512})
     });
