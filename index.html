@@ -1279,7 +1279,7 @@ async function sendChat(){
 }
 
 /* ══════════════════════════════════════════════
-   AI ASSISTANT — uses AI_WORKER (shadow-lvo)
+   AI ASSISTANT — uses shadow-LVO
 ══════════════════════════════════════════════ */
 function aiKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 
@@ -1287,48 +1287,65 @@ async function sendAI(){
   const input = document.getElementById('aiInput');
   const text = input.value.trim();
   if(!text || !_U) return;
+ 
   const btn = document.getElementById('aiSendBtn');
   btn.disabled = true;
   input.value = '';
+ 
+  // Show user message
   appendAIMsg('user', text);
   _aiHistory.push({role:'user', content:text});
+ 
+  // Show typing indicator
   document.getElementById('aiTyping').classList.add('show');
   scrollAI();
-  try{
-    const memberContext = `Name: ${_U.name}\nDivision: ${_U.division}\nTier: ${TIER_LABELS[_U.tier]}\nActive Deals: ${_U.deals.length?_U.deals.map(d=>d.name).join(', '):'None assigned'}\nAdmin: ${_U.isAdmin?'Yes':'No'}`;
-    const res = await aiFetch('/ai', {
+ 
+  try {
+    // Build identity context to pass to shadow-lvo worker
+    const res = await aiFetch('/', {
       method: 'POST',
-      body: JSON.stringify({messages:_aiHistory.slice(-20), member_context:memberContext, max_tokens:512})
+      body: JSON.stringify({
+        messages: _aiHistory.slice(-20),
+        currentUser: _U.name,
+        userRole: TIER_LABELS[_U.tier] || 'Tier IV — Member'
+      })
     });
-    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+ 
     document.getElementById('aiTyping').classList.remove('show');
-    const botDiv = appendAIMsg('lvo', '');
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let full = '';
-    while(true){
-      const{done,value} = await reader.read();
-      if(done) break;
-      const chunk = decoder.decode(value,{stream:true});
-      const lines = chunk.split('\n').filter(l=>l.startsWith('data: '));
-      for(const line of lines){
-        const data = line.slice(6).trim();
-        if(data==='[DONE]') break;
-        try{
-          const json = JSON.parse(data);
-          const delta = json.choices?.[0]?.delta?.content || json.delta?.text || '';
-          full += delta;
-          botDiv.querySelector('.ai-bubble').innerHTML = esc(full).replace(/\n/g,'<br/>');
-          scrollAI();
-        }catch(_){}
-      }
+ 
+    if(!res.ok){
+      const errText = await res.text();
+      throw new Error(`Worker returned ${res.status}: ${errText}`);
     }
-    _aiHistory.push({role:'assistant', content:full});
-  }catch(e){
+ 
+    // Worker returns a plain JSON message object — NOT a stream
+    const message = await res.json();
+ 
+    // Extract the text content from the Groq message object
+    let replyText = '';
+    if(typeof message.content === 'string'){
+      replyText = message.content;
+    } else if(Array.isArray(message.content)){
+      // Some models return content as an array of blocks
+      replyText = message.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('\n');
+    } else if(message.error){
+      replyText = `Error: ${message.error}`;
+    } else {
+      replyText = 'No response received.';
+    }
+ 
+    appendAIMsg('lvo', replyText);
+    _aiHistory.push({role:'assistant', content:replyText});
+ 
+  } catch(e) {
     document.getElementById('aiTyping').classList.remove('show');
     appendAIMsg('lvo', 'Connection failed. Try again.');
     console.error('AI error:', e);
   }
+ 
   btn.disabled = false;
   scrollAI();
 }
