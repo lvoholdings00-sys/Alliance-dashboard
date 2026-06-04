@@ -763,8 +763,7 @@
    - WORKER     → lvo-worker  (all data: members, deals, chats, announcements, groups, activity)
    - AI_WORKER  → shadow-lvo  (AI assistant only)
 ══════════════════════════════════════════════ */
-const WORKER    = 'https://lvo-worker.lvoholdings00.workers.dev';
-const AI_WORKER = 'https://shadow-lvo.lvoholdings00.workers.dev';
+const WORKER = 'https://lvo-worker.lvoholdings00.workers.dev';
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -832,9 +831,15 @@ function adminFetch(path, opts={}) {
 }
 
 /* AI fetch — always uses shadow-lvo */
-function aiFetch(path, opts={}){
-  const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
-  return fetch(AI_WORKER + path, {...opts, headers});
+function aiFetch(opts={}){
+  return fetch(WORKER + '/ai', {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Clerk-Role': _U?.isAdmin ? 'admin' : '',
+      ...(opts.headers||{})
+    }
+  });
 }
 
 /* ══════════════════════════════════════════════
@@ -1302,9 +1307,9 @@ async function sendAI(){
  
   try {
     // Build identity context to pass to shadow-lvo worker
-    const res = await aiFetch('/', {
-      method: 'POST',
-      body: JSON.stringify({
+  const res = await aiFetch({
+  method: 'POST',
+  body: JSON.stringify({
         messages: _aiHistory.slice(-20),
         currentUser: _U.name,
         userRole: TIER_LABELS[_U.tier] || 'Tier IV — Member'
