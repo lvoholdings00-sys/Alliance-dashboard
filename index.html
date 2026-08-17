@@ -9,10 +9,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cormorant+SC:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <script async crossorigin="anonymous"
-    data-clerk-publishable-key="pk_live_Y2xlcmsuYWxsaWFuY2Uud2VhcmVsdm8uY29tJA"
-    src="https://clerk.alliance.wearelvo.com/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-    type="text/javascript"></script>
 
   <style>
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -54,6 +50,9 @@
     .tb-right{display:flex;align-items:center;gap:1rem}
     .tb-tier{font-family:'Cinzel',serif;font-size:.4rem;letter-spacing:.25em;color:var(--purple);border:.5px solid var(--border);padding:.22rem .6rem;text-transform:uppercase}
     .tb-name{font-family:'Cinzel',serif;font-size:.42rem;letter-spacing:.2em;color:var(--dim2);text-transform:uppercase}
+    .tb-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;border:.5px solid rgba(127,119,221,.4)}
+    .tb-signout{background:none;border:.5px solid var(--border);color:var(--dim);font-family:'Cinzel',serif;font-size:.38rem;letter-spacing:.2em;padding:.4rem .7rem;cursor:pointer;text-transform:uppercase;transition:color .2s,border-color .2s}
+    .tb-signout:hover{color:var(--purple);border-color:var(--purple)}
 
     /* ── SHELL ── */
     #shell{flex:1;display:flex;overflow:hidden;position:relative;z-index:1}
@@ -341,6 +340,9 @@
     .tst.ok{color:var(--green);border-color:rgba(34,197,94,.3)}
     @keyframes tstIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
 
+    /* ── PROFILE FORM (replaces Clerk profile widget) ── */
+    .prof-form{display:grid;gap:.9rem;max-width:420px}
+
     /* ── RESPONSIVE ── */
     @media(max-width:900px){
       .stat-bar{grid-template-columns:1fr 1fr}
@@ -391,7 +393,8 @@
   <div class="tb-right">
     <span class="tb-name" id="tbName"></span>
     <span class="tb-tier" id="tbTier"></span>
-    <div id="clerkBtn"></div>
+    <img class="tb-avatar" id="tbAvatar" style="display:none"/>
+    <button class="tb-signout" id="tbSignOut" type="button">Sign Out</button>
   </div>
 </div>
 
@@ -580,7 +583,30 @@
       </div>
       <div class="card">
         <div class="ch"><span class="ct">Manage Account</span></div>
-        <div class="cb" id="clerkProfile" style="overflow:visible;min-height:200px"></div>
+        <div class="cb">
+          <div class="prof-form">
+            <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input class="form-input" id="profFirstName" type="text"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input class="form-input" id="profLastName" type="text"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input class="form-input" id="profUsername" type="text"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Avatar</label>
+              <input class="form-input" id="profAvatarFile" type="file" accept="image/*"/>
+            </div>
+            <div class="btn-row">
+              <button class="btn sm" onclick="saveProfile()">Save Changes →</button>
+            </div>
+            <p style="font-size:.78rem;font-style:italic;color:var(--dim);margin-top:.2rem">Email and division can't be changed here — contact LVO Administration.</p>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -756,14 +782,18 @@
 
 <div id="toasts"></div>
 
+<script src="assets/auth-client.js"></script>
 <script>
 /* ══════════════════════════════════════════════
    CONFIG
-   Two separate workers:
-   - WORKER     → lvo-worker  (all data: members, deals, chats, announcements, groups, activity)
-   - AI_WORKER  → shadow-lvo  (AI assistant only)
+   THIS_DIVISION locks the dashboard to one division. A user whose account
+   is in a different division (or who isn't signed in at all) gets bounced
+   back to the marketing site. Vindex/Ops dashboards are this same file
+   with THIS_DIVISION changed to 'Vindex' / 'Ops'.
 ══════════════════════════════════════════════ */
-const WORKER = 'https://lvo-worker.lvoholdings00.workers.dev';
+const WORKER = LVOAuth.WORKER;
+const THIS_DIVISION = 'Alliance';
+const MARKETING_SITE = 'https://wearelvo.com';
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -782,7 +812,6 @@ let _activity = [], _members = [], _groups = [];
 let _activeChannel = null;
 let _chatPollTimer = null;
 let _aiHistory = [];
-let _clerkProfileMounted = false;
 let _admChatType = 'deals';
 
 /* ══════════════════════════════════════════════
@@ -816,31 +845,16 @@ function logAct(action,isAdmin=false){
   renderAct();
 }
 
-/* ── FETCH HELPERS ── */
+/* ── FETCH HELPERS ──
+   All requests carry the Bearer session token automatically via LVOAuth._request.
+   Role/permission checks happen server-side against the session — there is
+   no client-supplied role header to trust or forge. ── */
 function workerFetch(path, opts={}){
-  const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
-  return fetch(WORKER + path, {...opts, headers});
+  return LVOAuth._request(path, opts).then(data => ({ ok:true, json:async()=>data }))
+    .catch(e => ({ ok:false, status:e.status||500, json:async()=>e.data||{error:e.message}, text:async()=>e.message }));
 }
-
-function adminFetch(path, opts={}) {
-  const role = _U?.isAdmin ? 'admin' : '';
-  return workerFetch(path, {
-    ...opts,
-    headers: {...(opts.headers||{}), 'X-Clerk-Role': role}
-  });
-}
-
-/* AI fetch — always uses shadow-lvo */
-function aiFetch(opts={}){
-  return fetch(WORKER + '/ai', {
-    ...opts,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Clerk-Role': _U?.isAdmin ? 'admin' : '',
-      ...(opts.headers||{})
-    }
-  });
-}
+function adminFetch(path, opts={}){ return workerFetch(path, opts); }
+function aiFetch(opts={}){ return workerFetch('/ai', opts); }
 
 /* ══════════════════════════════════════════════
    LOCAL PINS
@@ -899,26 +913,29 @@ function switchAdmTab(name,btn){
 }
 
 /* ══════════════════════════════════════════════
-   POPULATE DASHBOARD
+   POPULATE DASHBOARD (from LVOAuth session user + /auth/me/deals)
 ══════════════════════════════════════════════ */
-function populateDash(user){
-  const meta = user.publicMetadata || {};
-  const name = user.fullName || user.firstName || 'Member';
-  const email = user.primaryEmailAddress?.emailAddress || '—';
-  const isAdmin = meta.role === 'admin';
-  const tier = parseInt(meta.tier) || 4;
-  const division = meta.division || 'Alliance';
-  const role = meta.role || 'member';
+async function populateDash(user){
+  const name = `${user.firstName||''} ${user.lastName||''}`.trim() || user.username || 'Member';
+  const email = user.email || '—';
+  const isAdmin = user.role === 'admin';
+  const tier = parseInt(user.tier) || 4;
+  const division = user.division || THIS_DIVISION;
+  const role = user.role || 'member';
   const joined = user.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US',{month:'long',year:'numeric'})
     : '—';
-  const deals = Array.isArray(meta.active_deals) ? meta.active_deals : [];
+  const deals = await LVOAuth.myDeals();
 
-  _U = {uid:user.id, name, email, isAdmin, tier, division, role, joined, deals};
+  _U = {uid:user.id, name, email, isAdmin, tier, division, role, joined, deals, avatar:user.avatar||'', username:user.username||''};
   loadLocalPins();
 
   document.getElementById('tbName').textContent = name;
   document.getElementById('tbTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
+  if(user.avatar){
+    const av = document.getElementById('tbAvatar');
+    av.src = user.avatar; av.style.display = 'inline-block';
+  }
   document.getElementById('ovTitle').textContent = `Welcome, ${name.split(' ')[0]}`;
   document.getElementById('sTier').textContent = TIER_LABELS[tier] || TIER_LABELS[4];
   document.getElementById('sJoined').textContent = joined;
@@ -929,6 +946,9 @@ function populateDash(user){
   document.getElementById('acDiv').textContent = division;
   document.getElementById('acRole').textContent = isAdmin ? 'Administrator' : role;
   document.getElementById('acJoined').textContent = joined;
+  document.getElementById('profFirstName').value = user.firstName || '';
+  document.getElementById('profLastName').value = user.lastName || '';
+  document.getElementById('profUsername').value = user.username || '';
   document.getElementById('admBadgeWrap').style.display = isAdmin ? 'block' : 'none';
   document.getElementById('adminNav').style.display = isAdmin ? 'flex' : 'none';
   const bnAdmin = document.getElementById('bnAdminItem');
@@ -943,11 +963,40 @@ function populateDash(user){
   renderDeals(deals, tier, isAdmin);
   renderFin(deals, tier, isAdmin);
   initChatsPanel();
+}
 
-  workerFetch('/members', {
-    method: 'POST',
-    body: JSON.stringify({uid:user.id, name, email, tier, division, role, joined:user.createdAt, deals})
-  }).catch(e => console.warn('Member sync failed:', e));
+async function saveProfile(){
+  const firstName = document.getElementById('profFirstName').value.trim();
+  const lastName  = document.getElementById('profLastName').value.trim();
+  const username  = document.getElementById('profUsername').value.trim();
+  const fileInput = document.getElementById('profAvatarFile');
+
+  const applyUpdate = async (avatar) => {
+    try{
+      const fields = { firstName, lastName, username };
+      if(avatar !== undefined) fields.avatar = avatar;
+      const updated = await LVOAuth.updateProfile(fields);
+      _U.name = `${updated.firstName} ${updated.lastName}`.trim();
+      document.getElementById('tbName').textContent = _U.name;
+      document.getElementById('acName').textContent = _U.name;
+      if(updated.avatar){
+        const av = document.getElementById('tbAvatar');
+        av.src = updated.avatar; av.style.display = 'inline-block';
+      }
+      toast('Profile updated', 'ok');
+      logAct('Updated profile');
+    }catch(e){
+      toast('Failed: ' + (e.data?.error || e.message), 'err');
+    }
+  };
+
+  if(fileInput.files && fileInput.files[0]){
+    const reader = new FileReader();
+    reader.onload = () => applyUpdate(reader.result);
+    reader.readAsDataURL(fileInput.files[0]);
+  } else {
+    applyUpdate(undefined);
+  }
 }
 
 /* ══════════════════════════════════════════════
@@ -1043,7 +1092,7 @@ async function fetchAnn(manual=false){
     _ann = await res.json();
     renderAnnList();
     renderOvAnn();
-    const gPinned = _ann.filter(a => a.pinned && (a.division==='Alliance'||a.division==='All'));
+    const gPinned = _ann.filter(a => a.pinned && (a.division===THIS_DIVISION||a.division==='All'));
     if(gPinned.length){
       document.getElementById('annBadge').style.display = 'block';
       document.getElementById('bnAnnDot').classList.add('show');
@@ -1061,8 +1110,8 @@ async function fetchAnn(manual=false){
 
 function renderOvAnn(){
   const el = document.getElementById('ovAnn');
-  const myPins = _ann.filter(a=>(a.division==='Alliance'||a.division==='All') && isLocallyPinned(a.id));
-  const rest   = _ann.filter(a=>(a.division==='Alliance'||a.division==='All') && !isLocallyPinned(a.id));
+  const myPins = _ann.filter(a=>(a.division===THIS_DIVISION||a.division==='All') && isLocallyPinned(a.id));
+  const rest   = _ann.filter(a=>(a.division===THIS_DIVISION||a.division==='All') && !isLocallyPinned(a.id));
   const items  = [...myPins, ...rest].slice(0,3);
   if(!items.length){el.innerHTML='<div class="empty">No announcements yet.</div>';return;}
   el.innerHTML = items.map(a=>`<div style="padding:.75rem 1.4rem;border-bottom:.5px solid var(--border)">
@@ -1080,9 +1129,9 @@ function renderOvAnn(){
 function renderAnnList(){
   const el = document.getElementById('annList');
   let data = [..._ann];
-  if(_annFilter==='all')    data = data.filter(a=>a.division==='All'||a.division==='Alliance');
-  else if(_annFilter==='pinned') data = data.filter(a=>(a.division==='All'||a.division==='Alliance')&&isLocallyPinned(a.id));
-  else if(_annFilter==='div')  data = data.filter(a=>a.division==='Alliance');
+  if(_annFilter==='all')    data = data.filter(a=>a.division==='All'||a.division===THIS_DIVISION);
+  else if(_annFilter==='pinned') data = data.filter(a=>(a.division==='All'||a.division===THIS_DIVISION)&&isLocallyPinned(a.id));
+  else if(_annFilter==='div')  data = data.filter(a=>a.division===THIS_DIVISION);
   data.sort((a,b)=>{
     const ap = isLocallyPinned(a.id)?2:a.pinned?1:0;
     const bp = isLocallyPinned(b.id)?2:b.pinned?1:0;
@@ -1284,7 +1333,7 @@ async function sendChat(){
 }
 
 /* ══════════════════════════════════════════════
-   AI ASSISTANT — uses shadow-LVO
+   AI ASSISTANT
 ══════════════════════════════════════════════ */
 function aiKeydown(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();} }
 
@@ -1292,46 +1341,36 @@ async function sendAI(){
   const input = document.getElementById('aiInput');
   const text = input.value.trim();
   if(!text || !_U) return;
- 
+
   const btn = document.getElementById('aiSendBtn');
   btn.disabled = true;
   input.value = '';
- 
-  // Show user message
+
   appendAIMsg('user', text);
   _aiHistory.push({role:'user', content:text});
- 
-  // Show typing indicator
+
   document.getElementById('aiTyping').classList.add('show');
   scrollAI();
- 
+
   try {
-    // Build identity context to pass to shadow-lvo worker
-  const res = await aiFetch({
-  method: 'POST',
-  body: JSON.stringify({
-        messages: _aiHistory.slice(-20),
-        currentUser: _U.name,
-        userRole: TIER_LABELS[_U.tier] || 'Tier IV — Member'
-      })
+    const res = await aiFetch({
+      method: 'POST',
+      body: JSON.stringify({ messages: _aiHistory.slice(-20) })
     });
- 
+
     document.getElementById('aiTyping').classList.remove('show');
- 
+
     if(!res.ok){
       const errText = await res.text();
       throw new Error(`Worker returned ${res.status}: ${errText}`);
     }
- 
-    // Worker returns a plain JSON message object — NOT a stream
+
     const message = await res.json();
- 
-    // Extract the text content from the Groq message object
+
     let replyText = '';
     if(typeof message.content === 'string'){
       replyText = message.content;
     } else if(Array.isArray(message.content)){
-      // Some models return content as an array of blocks
       replyText = message.content
         .filter(block => block.type === 'text')
         .map(block => block.text)
@@ -1341,16 +1380,16 @@ async function sendAI(){
     } else {
       replyText = 'No response received.';
     }
- 
+
     appendAIMsg('lvo', replyText);
     _aiHistory.push({role:'assistant', content:replyText});
- 
+
   } catch(e) {
     document.getElementById('aiTyping').classList.remove('show');
     appendAIMsg('lvo', 'Connection failed. Try again.');
     console.error('AI error:', e);
   }
- 
+
   btn.disabled = false;
   scrollAI();
 }
@@ -1493,7 +1532,7 @@ function setupAnnPreview(){
   const update = () => {
     const title  = document.getElementById('annTitle')?.value || '';
     const body   = document.getElementById('annBody')?.value  || '';
-    const div    = document.getElementById('annDivision')?.value || 'Alliance';
+    const div    = document.getElementById('annDivision')?.value || THIS_DIVISION;
     const author = document.getElementById('annAuthor')?.value  || _U?.name || 'LVO Administration';
     const el = document.getElementById('annPreview');
     if(!el) return;
@@ -1734,94 +1773,54 @@ async function adminDeleteMsg(type, dealKey, groupId, msgId){
 }
 
 /* ══════════════════════════════════════════════
-   CLERK APPEARANCE
-══════════════════════════════════════════════ */
-const APPEARANCE = {
-  variables:{
-    colorBackground:'#080808',colorText:'#F0EEEC',colorPrimary:'#7F77DD',
-    colorInputBackground:'transparent',colorInputText:'#F0EEEC',
-    borderRadius:'0px',fontFamily:"'Cormorant Garamond',Georgia,serif"
-  },
-  elements:{
-    card:{background:'transparent',border:'.5px solid rgba(127,119,221,.25)',boxShadow:'none',borderRadius:'0'},
-    headerTitle:{fontFamily:"'Cinzel',serif",letterSpacing:'.2em',color:'#C8C8D0'},
-    formFieldLabel:{color:'#888880',fontFamily:"'Cinzel',serif",letterSpacing:'.12em',fontSize:'.7rem'},
-    formFieldInput:{background:'transparent',border:'.5px solid rgba(127,119,221,.35)',borderRadius:'0',color:'#F0EEEC'},
-    formButtonPrimary:{background:'transparent',border:'.5px solid #7F77DD',borderRadius:'0',color:'#7F77DD',fontFamily:"'Cinzel',serif",letterSpacing:'.3em',textTransform:'uppercase',boxShadow:'none'},
-    footerActionLink:{color:'#7F77DD'},
-    avatarBox:{border:'.5px solid rgba(127,119,221,.4)',borderRadius:'50%'},
-    userButtonPopoverCard:{background:'#080808',border:'.5px solid rgba(127,119,221,.25)',boxShadow:'0 8px 32px rgba(0,0,0,.8)'},
-    userButtonPopoverActionButton:{color:'#F0EEEC'},
-    userButtonPopoverActionButtonText:{color:'#F0EEEC'},
-    userButtonPopoverFooter:{background:'#080808'}
-  }
-};
-
-/* ══════════════════════════════════════════════
    INIT
 ══════════════════════════════════════════════ */
 window.addEventListener('load', async () => {
-  setLoad('Loading Clerk…');
-  let attempts = 0;
-  while(typeof Clerk === 'undefined' && attempts < 30){
-    await new Promise(r=>setTimeout(r,200));
-    attempts++;
-  }
-  if(typeof Clerk === 'undefined'){
-    document.getElementById('loadStatus').textContent = 'Clerk failed to load.';
-    return;
-  }
-  try{
-    setLoad('Authenticating…');
-    await Clerk.load();
-  }catch(e){
-    document.getElementById('loadStatus').textContent = 'Auth error: '+e.message;
-    return;
-  }
-
-  async function showDash(user){
-    setLoad('Loading your profile…');
-    try{ await user.reload(); }catch(e){}
-    setLoad('Connecting…');
-    try{ Clerk.mountUserButton(document.getElementById('clerkBtn'), {appearance:APPEARANCE}); }catch(e){}
-    if(!_clerkProfileMounted){
-      try{
-        Clerk.mountUserProfile(document.getElementById('clerkProfile'), {appearance:APPEARANCE});
-        _clerkProfileMounted = true;
-      }catch(e){}
-    }
-    populateDash(user);
-    document.getElementById('topbar').style.display = 'flex';
-    document.getElementById('shell').style.display  = 'flex';
-    const ls = document.getElementById('loadScreen');
-    ls.classList.add('out');
-    setTimeout(()=>ls.remove(), 700);
-    await fetchAnn();
-    startCountdown();
-    logAct(`Signed in · ${user.fullName||user.firstName||'Member'}`);
-    setSbStatus(true, 'Connected · Live');
-  }
-
-  if(Clerk.user){
-    await showDash(Clerk.user);
-  } else {
-    setLoad('Checking session…');
-    await new Promise(r=>setTimeout(r,1000));
-    if(Clerk.user){
-      await showDash(Clerk.user);
-    } else {
-      setLoad('Redirecting…');
-      setTimeout(()=>{ window.location.href='https://wearelvo.com'; }, 800);
-    }
-  }
-
-  Clerk.addListener(({user})=>{
-    if(!user){
-      clearInterval(_annTimer);
-      clearInterval(_chatPollTimer);
-      window.location.href = 'https://wearelvo.com';
-    }
+  setLoad('Checking session…');
+  document.getElementById('tbSignOut').addEventListener('click', async () => {
+    clearInterval(_annTimer);
+    clearInterval(_chatPollTimer);
+    await LVOAuth.logout();
+    window.location.href = MARKETING_SITE;
   });
+
+  const token = LVOAuth.getToken();
+  if(!token){
+    setLoad('Redirecting…');
+    setTimeout(()=>{ window.location.href = MARKETING_SITE; }, 600);
+    return;
+  }
+
+  setLoad('Authenticating…');
+  const user = await LVOAuth.session();
+
+  if(!user){
+    setLoad('Session expired. Redirecting…');
+    LVOAuth.clearToken();
+    setTimeout(()=>{ window.location.href = MARKETING_SITE; }, 800);
+    return;
+  }
+
+  if(user.division !== THIS_DIVISION){
+    // This account belongs to a different division — this dashboard isn't theirs.
+    setLoad(`This account is registered under ${user.division}, not ${THIS_DIVISION}. Redirecting…`);
+    setTimeout(()=>{ window.location.href = MARKETING_SITE; }, 1600);
+    return;
+  }
+
+  setLoad('Loading your profile…');
+  await populateDash(user);
+
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('shell').style.display  = 'flex';
+  const ls = document.getElementById('loadScreen');
+  ls.classList.add('out');
+  setTimeout(()=>ls.remove(), 700);
+
+  await fetchAnn();
+  startCountdown();
+  logAct(`Signed in · ${_U.name}`);
+  setSbStatus(true, 'Connected · Live');
 });
 </script>
 </body>
