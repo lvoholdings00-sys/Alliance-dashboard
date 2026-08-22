@@ -903,6 +903,8 @@
 const WORKER = LVOAuth.WORKER;
 const THIS_DIVISION = 'Alliance';
 const MARKETING_SITE = 'https://wearelvo.com';
+const DOWN_PAGE = 'https://down.wearelvo.com/';
+const STATUS_POLL_MS = 20000; // re-check every 20s while the dashboard stays open
 
 const TIER_LABELS = {
   1:'Tier I — Principal',
@@ -970,6 +972,35 @@ function workerFetch(path, opts={}){
 }
 function adminFetch(path, opts={}){ return workerFetch(path, opts); }
 function aiFetch(opts={}){ return workerFetch('/ai', opts); }
+
+let _statusPollTimer = null;
+
+/* Returns true (and redirects) if this division is marked down.
+   Fails OPEN on network errors so a blip never locks someone out. */
+async function checkSystemStatus(){
+  try{
+    const res = await workerFetch(`/system-status/${encodeURIComponent(THIS_DIVISION)}`);
+    if(!res.ok) return false;
+    const data = await res.json();
+    if(data.down){
+      const params = new URLSearchParams({ division: THIS_DIVISION, msg: data.message || '' });
+      window.location.replace(`${DOWN_PAGE}?${params.toString()}`);
+      return true;
+    }
+    return false;
+  }catch(e){
+    console.warn('system status check failed (failing open)', e);
+    return false;
+  }
+}
+
+function startStatusPolling(){
+  clearInterval(_statusPollTimer);
+  _statusPollTimer = setInterval(checkSystemStatus, STATUS_POLL_MS);
+  document.addEventListener('visibilitychange', () => {
+    if(!document.hidden) checkSystemStatus();
+  });
+}
 
 /* ══════════════════════════════════════════════
    LOCAL PINS
@@ -1993,6 +2024,7 @@ window.addEventListener('load', async () => {
   document.getElementById('tbSignOut').addEventListener('click', async () => {
     clearInterval(_annTimer);
     clearInterval(_chatPollTimer);
+    clearInterval(_statusPollTimer);
     await LVOAuth.logout();
     window.location.href = MARKETING_SITE;
   });
@@ -2021,6 +2053,10 @@ window.addEventListener('load', async () => {
     return;
   }
 
+  setLoad('Checking system status…');
+  const isDown = await checkSystemStatus();
+  if(isDown) return; // already redirected to down.html
+
   setLoad('Loading your profile…');
   await populateDash(user);
 
@@ -2032,6 +2068,7 @@ window.addEventListener('load', async () => {
 
   await fetchAnn();
   startCountdown();
+  startStatusPolling();
   logAct(`Signed in · ${_U.name}`);
   setSbStatus(true, 'Connected · Live');
 });
