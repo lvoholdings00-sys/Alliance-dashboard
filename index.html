@@ -498,6 +498,78 @@
     <div class="panel" id="p-deals">
       <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Deal Flow</div><div class="ph-title">Active Deals</div><div class="ph-sub">All deals assigned to your Alliance account.</div></div><div class="ph-rule"></div></div>
       <div id="dealsLocked" class="locked-notice" style="display:none"><p class="ln-text">Deal Flow <span>Restricted</span><br/>Unlocked at Tier III and above</p></div>
+
+      <div class="card g-full" id="dealMgmtCard" style="display:none;margin-bottom:1.2rem">
+        <div class="ch"><span class="ct">Manage Deals</span><span class="cm">Associates &amp; Principals</span></div>
+        <div class="cb">
+          <div class="ann-form">
+            <input type="hidden" id="dealEditId" value=""/>
+            <div class="ann-form-row">
+              <div class="form-group">
+                <label class="form-label">Assign To</label>
+                <select class="form-select" id="dealOwnerType" onchange="refreshDealOwnerOptions()">
+                  <option value="member">Member</option>
+                  <option value="group">Group</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Owner</label>
+                <select class="form-select" id="dealOwnerId"><option value="">Loading…</option></select>
+              </div>
+            </div>
+            <div class="ann-form-row">
+              <div class="form-group">
+                <label class="form-label">Deal Name</label>
+                <input class="form-input" id="dealName" type="text" placeholder="Deal name…"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Division</label>
+                <select class="form-select" id="dealDivision">
+                  <option value="Alliance">Alliance</option>
+                  <option value="Vindex">Vindex</option>
+                  <option value="Ops">Ops</option>
+                  <option value="All">All</option>
+                </select>
+              </div>
+            </div>
+            <div class="ann-form-row">
+              <div class="form-group">
+                <label class="form-label">Position</label>
+                <input class="form-input" id="dealPosition" type="text" placeholder="e.g. Co-GP, LP…"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="form-select" id="dealStatus">
+                  <option value="active">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+            </div>
+            <div class="ann-form-row">
+              <div class="form-group">
+                <label class="form-label">Date</label>
+                <input class="form-input" id="dealDate" type="text" placeholder="e.g. Jun 2026"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Capital</label>
+                <input class="form-input" id="dealCapital" type="text" placeholder="e.g. $250,000"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Note</label>
+              <textarea class="form-textarea" id="dealNote" placeholder="Optional note…"></textarea>
+            </div>
+            <div class="btn-row">
+              <button class="btn" id="dealSaveBtn" onclick="saveDeal()">Create Deal →</button>
+              <button class="btn ghost" id="dealCancelBtn" style="display:none" onclick="resetDealForm()">Cancel Edit</button>
+            </div>
+          </div>
+        </div>
+        <div class="ch" style="border-top:.5px solid var(--border)"><span class="ct">All Deals</span><button class="btn sm ghost" onclick="loadAllDeals()">↺ Refresh</button></div>
+        <div id="allDealsList"><div class="empty" style="padding:1.5rem">Loading…</div></div>
+      </div>
+
       <div id="dealsContent"></div>
     </div>
 
@@ -533,6 +605,15 @@
     <div class="panel" id="p-financials">
       <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Capital</div><div class="ph-title">Financials</div><div class="ph-sub">Account-level positions and capital summary.</div></div><div class="ph-rule"></div></div>
       <div id="finLocked" class="locked-notice" style="display:none"><p class="ln-text">Financial Data <span>Restricted</span><br/>Unlocked at Tier III and above</p></div>
+
+      <div class="card g-full" id="finMgmtCard" style="display:none;margin-bottom:1.2rem">
+        <div class="ch"><span class="ct">Manage Capital</span><span class="cm">Associates &amp; Principals</span></div>
+        <div class="cb" style="font-size:.82rem;font-style:italic;color:var(--dim2);padding-bottom:0">
+          Quick-edit capital on any deal below, or head to the <strong style="color:var(--purple);font-style:normal">Deals</strong> tab to add, edit, or remove full deal records for any member or group.
+        </div>
+        <div id="finMgmtList"><div class="empty" style="padding:1.5rem">Loading…</div></div>
+      </div>
+
       <div id="finContent">
         <div class="fin-grid">
           <div class="fgc"><div class="fg-lbl">Capital Deployed</div><div class="fg-val" id="finCap">—</div></div>
@@ -541,7 +622,7 @@
         </div>
         <div class="card" style="overflow-x:auto">
           <div class="ch"><span class="ct">Deal Positions</span><span class="cm" id="finMonth">—</span></div>
-          <table class="ft"><thead><tr><th>Deal</th><th>Position</th><th>Division</th><th>Status</th><th>Capital</th></tr></thead>
+          <table class="ft"><thead><tr><th>Deal</th><th>Position</th><th>Division</th><th>Status</th><th>Capital</th><th id="finManageTh" style="display:none">Manage</th></tr></thead>
           <tbody id="finTbody"><tr><td colspan="5"><div class="empty">Loading…</div></td></tr></tbody></table>
         </div>
       </div>
@@ -552,9 +633,12 @@
       <div class="ph"><div class="ph-left"><div class="ph-eyebrow">Partnership Structure</div><div class="ph-title">Tiers</div><div class="ph-sub">Your current standing and the Alliance hierarchy.</div></div><div class="ph-rule"></div></div>
       <div class="card g-full" style="margin-bottom:1.2rem">
         <div class="ch"><span class="ct">Your Standing</span></div>
-        <div class="cb">
-          <div style="margin-bottom:.6rem"><div style="font-family:'Cinzel',serif;font-size:.38rem;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:.4rem">Current Tier</div><div style="font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.18em;color:var(--purple)" id="tierPageVal">—</div></div>
-          <p style="font-size:.88rem;font-style:italic;color:var(--dim2);line-height:1.7">Tier advancement is reviewed and updated directly by LVO Holdings administration.</p>
+        <div class="cb" style="display:flex;gap:2rem;align-items:center;flex-wrap:wrap">
+          <div id="tierRuneWrap" style="flex-shrink:0;display:flex;justify-content:center"></div>
+          <div style="flex:1;min-width:220px">
+            <div style="margin-bottom:.6rem"><div style="font-family:'Cinzel',serif;font-size:.38rem;letter-spacing:.35em;color:var(--dim);text-transform:uppercase;margin-bottom:.4rem">Current Tier</div><div style="font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.18em;color:var(--purple)" id="tierPageVal">—</div></div>
+            <p style="font-size:.88rem;font-style:italic;color:var(--dim2);line-height:1.7">Tier advancement is reviewed and updated directly by LVO Holdings administration.</p>
+          </div>
         </div>
       </div>
       <div class="card g-full">
@@ -919,6 +1003,52 @@ const DIVISION_DESK_EMAIL = {
   Ops: 'ops@wearelvo.com',
 };
 
+// Ascending rune ladder, bottom (Tier IV) to top (Tier I).
+const TIER_RUNES = { 4:'ᚠ', 3:'ᚱ', 2:'ᚨ', 1:'ᛟ' };
+const TIER_SHORT = { 4:'IV', 3:'III', 2:'II', 1:'I' };
+
+// Associates (Tier II) and Principals (Tier I) — plus Admins — can manage
+// deal flow and financial data for other members/groups.
+function canManage(){
+  return !!(_U && (_U.isAdmin || _U.tier <= 2));
+}
+
+/* ── TIER RUNE LADDER ──
+   A vertical ladder of rune glyphs, Tier IV at the bottom rising to
+   Tier I at the top. Rungs at-or-below the member's current tier are
+   lit as "achieved"; the current tier glows and pulses; tiers above
+   are shown hollow/locked. ── */
+function renderTierRune(tier){
+  const wrap = document.getElementById('tierRuneWrap');
+  if(!wrap) return;
+  const order = [4,3,2,1]; // bottom → top
+  const ys = {4:250, 3:170, 2:90, 1:14};
+  const achieved = t => t >= tier; // lower tier number = higher rank
+  let connectors = '';
+  for(let i=0;i<order.length-1;i++){
+    const a = order[i], b = order[i+1];
+    const lit = achieved(a) && achieved(b);
+    connectors += `<line x1="42" y1="${ys[a]}" x2="42" y2="${ys[b]}" stroke="${lit?'var(--purple)':'var(--border)'}" stroke-width="1.5" stroke-opacity="${lit?0.85:0.4}"/>`;
+  }
+  let rungs = '';
+  order.forEach(t=>{
+    const isCurrent = t===tier;
+    const isAchieved = achieved(t);
+    const y = ys[t];
+    const r = isCurrent ? 20 : 14;
+    rungs += `<g>
+      ${isCurrent?`<circle cx="42" cy="${y}" r="${r+5}" fill="none" stroke="var(--purple)" stroke-width="1" opacity="0.5">
+        <animate attributeName="r" values="${r+3};${r+9};${r+3}" dur="2.6s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="0.6;0.12;0.6" dur="2.6s" repeatCount="indefinite"/>
+      </circle>`:''}
+      <circle cx="42" cy="${y}" r="${r}" fill="${isCurrent?'rgba(127,119,221,.16)':(isAchieved?'rgba(127,119,221,.05)':'transparent')}" stroke="${isCurrent?'var(--purple)':(isAchieved?'var(--border-hi)':'var(--border)')}" stroke-width="${isCurrent?1.2:0.6}"/>
+      <text x="42" y="${y+6}" text-anchor="middle" font-size="${isCurrent?18:12}" fill="${isCurrent?'var(--purple)':(isAchieved?'var(--chrome)':'var(--dim)')}">${TIER_RUNES[t]}</text>
+      <text x="70" y="${y+3}" font-family="Cinzel, serif" font-size="6" letter-spacing="1" fill="${isCurrent?'var(--purple)':'var(--dim)'}">${TIER_SHORT[t]}</text>
+    </g>`;
+  });
+  wrap.innerHTML = `<svg viewBox="0 0 110 276" width="92" height="248" xmlns="http://www.w3.org/2000/svg">${connectors}${rungs}</svg>`;
+}
+
 /* ══════════════════════════════════════════════
    STATE
 ══════════════════════════════════════════════ */
@@ -1041,6 +1171,7 @@ function goTo(id){
     document.getElementById('bnAnnDot').classList.remove('show');
   }
   if(id==='deals') document.getElementById('bnDealDot').classList.remove('show');
+  if((id==='deals'||id==='financials') && canManage()) loadAllDeals();
   if(id==='admin') initAdminPanel();
   if(id==='chats') initChatsPanel();
   document.getElementById('main').scrollTop=0;
@@ -1113,6 +1244,20 @@ async function populateDash(user){
   const aiCard = document.getElementById('aiChatCard');
   if(aiCard) aiCard.style.display = (isAdmin || tier <= 3) ? 'block' : 'none';
 
+  renderTierRune(tier);
+
+  const mgmt = canManage();
+  const dmc = document.getElementById('dealMgmtCard');
+  if(dmc) dmc.style.display = mgmt ? 'block' : 'none';
+  const fmc = document.getElementById('finMgmtCard');
+  if(fmc) fmc.style.display = mgmt ? 'block' : 'none';
+  if(mgmt){
+    ensureManagerDataLoaded().then(()=>{
+      refreshDealOwnerOptions();
+      loadAllDeals();
+    });
+  }
+
   renderDeals(deals, tier, isAdmin);
   renderFin(deals, tier, isAdmin);
   initChatsPanel();
@@ -1157,11 +1302,16 @@ async function saveProfile(){
 ══════════════════════════════════════════════ */
 function dealHTML(d, isAdmin, tier){
   const sc = (d.status || 'active').toLowerCase();
-  const showCap = isAdmin || tier <= 1;
+  const showCap = isAdmin || tier <= 2;
+  const mgmt = canManage() && d.id;
   return `<div class="deal">
     <div class="deal-hd">
       <span class="deal-name">${esc(d.name||'Unnamed')}</span>
-      <span class="deal-st ${sc}">${esc(d.status||'Active')}</span>
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <span class="deal-st ${sc}">${esc(d.status||'Active')}</span>
+        ${mgmt ? `<button class="ann-action-btn" onclick="editDealById('${d.id}')">Edit</button>
+        <button class="ann-action-btn del" onclick="deleteDeal('${d.id}')">Delete</button>` : ''}
+      </div>
     </div>
     <div class="deal-meta">
       <div><div class="dm-lbl">Division</div><div class="dm-val">${esc(d.division||'—')}</div></div>
@@ -1207,7 +1357,10 @@ function renderFin(deals, tier, isAdmin){
   document.getElementById('finLocked').style.display = canSee ? 'none' : 'block';
   document.getElementById('finContent').style.display = canSee ? 'block' : 'none';
   if(!canSee) return;
-  const showCap = isAdmin || tier <= 1;
+  const showCap = isAdmin || tier <= 2;
+  const mgmt = canManage();
+  const finManageTh = document.getElementById('finManageTh');
+  if(finManageTh) finManageTh.style.display = mgmt ? '' : 'none';
   let total = 0;
   deals.forEach(d => {
     if(!d.capital) return;
@@ -1219,7 +1372,7 @@ function renderFin(deals, tier, isAdmin){
   document.getElementById('finDls').textContent = deals.filter(d=>(d.status||'').toLowerCase()==='active').length || deals.length || '—';
   const tb = document.getElementById('finTbody');
   if(!deals.length){
-    tb.innerHTML = '<tr><td colspan="5"><div class="empty">No deal positions on file.</div></td></tr>';
+    tb.innerHTML = `<tr><td colspan="${mgmt?6:5}"><div class="empty">No deal positions on file.</div></td></tr>`;
     return;
   }
   tb.innerHTML = deals.map(d => {
@@ -1230,8 +1383,197 @@ function renderFin(deals, tier, isAdmin){
       <td><span class="ft-lbl">Division</span>${esc(d.division||'—')}</td>
       <td><span class="deal-st ${sc}" style="display:inline-block">${esc(d.status||'Active')}</span></td>
       <td>${showCap ? esc(d.capital||'—') : '—'}</td>
+      ${mgmt ? `<td>${d.id ? `<div class="btn-row"><button class="btn xs" onclick="editDealById('${d.id}')">Edit</button><button class="btn xs danger" onclick="deleteDeal('${d.id}')">Delete</button></div>` : '—'}</td>` : ''}
     </tr>`;
   }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   DEAL & FINANCIAL MANAGEMENT (Associates, Principals, Admins)
+   NOTE: assumes worker endpoints GET/POST /deals and PUT/DELETE
+   /deals/:id, each deal record including {id, ownerType, ownerId,
+   ownerName, name, division, position, status, date, capital, note}.
+   If the worker doesn't yet expose /deals, add it there to match.
+══════════════════════════════════════════════ */
+let _allDeals = [];
+
+async function ensureManagerDataLoaded(){
+  const tasks = [];
+  if(!_members.length) tasks.push(workerFetch('/members').then(async r=>{ if(r.ok) _members = await r.json(); }).catch(()=>{}));
+  if(!_groups.length)  tasks.push(workerFetch('/groups').then(async r=>{ if(r.ok) _groups = await r.json(); }).catch(()=>{}));
+  await Promise.all(tasks);
+}
+
+function refreshDealOwnerOptions(){
+  const type = document.getElementById('dealOwnerType')?.value || 'member';
+  const sel = document.getElementById('dealOwnerId');
+  if(!sel) return;
+  if(type==='member'){
+    sel.innerHTML = _members.length
+      ? _members.map(m=>`<option value="${esc(m.uid||'')}">${esc(m.name||'Unknown')} · ${esc(m.email||'')}</option>`).join('')
+      : '<option value="">No members loaded</option>';
+  } else {
+    sel.innerHTML = _groups.length
+      ? _groups.map(g=>`<option value="${esc(g.id||'')}">${esc(g.name||'Unknown group')}</option>`).join('')
+      : '<option value="">No groups loaded</option>';
+  }
+}
+
+async function loadAllDeals(){
+  const listEl = document.getElementById('allDealsList');
+  const finEl  = document.getElementById('finMgmtList');
+  if(listEl) listEl.innerHTML = '<div class="empty" style="padding:1.5rem">Loading…</div>';
+  if(finEl)  finEl.innerHTML  = '<div class="empty" style="padding:1.5rem">Loading…</div>';
+  try{
+    const res = await workerFetch('/deals');
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    _allDeals = await res.json();
+    renderAllDealsList();
+    renderFinMgmtList();
+  }catch(e){
+    const msg = `<div class="empty" style="color:var(--red)">Error loading deals: ${esc(e.message)}. (Confirm the worker exposes a /deals endpoint.)</div>`;
+    if(listEl) listEl.innerHTML = msg;
+    if(finEl)  finEl.innerHTML  = msg;
+  }
+}
+
+function renderAllDealsList(){
+  const el = document.getElementById('allDealsList');
+  if(!el) return;
+  if(!_allDeals.length){ el.innerHTML = '<div class="empty" style="padding:1.5rem">No deals on file yet.</div>'; return; }
+  el.innerHTML = _allDeals.map(d=>{
+    const sc = (d.status||'active').toLowerCase();
+    return `<div class="deal">
+      <div class="deal-hd">
+        <span class="deal-name">${esc(d.name||'Unnamed')}</span>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="deal-st ${sc}">${esc(d.status||'Active')}</span>
+          <button class="ann-action-btn" onclick="editDealById('${d.id}')">Edit</button>
+          <button class="ann-action-btn del" onclick="deleteDeal('${d.id}')">Delete</button>
+        </div>
+      </div>
+      <div class="deal-meta">
+        <div><div class="dm-lbl">Owner</div><div class="dm-val">${esc(d.ownerName || d.ownerId || '—')} (${esc(d.ownerType||'member')})</div></div>
+        <div><div class="dm-lbl">Division</div><div class="dm-val">${esc(d.division||'—')}</div></div>
+        <div><div class="dm-lbl">Position</div><div class="dm-val">${esc(d.position||'—')}</div></div>
+        <div><div class="dm-lbl">Capital</div><div class="dm-val">${esc(d.capital||'—')}</div></div>
+      </div>
+      ${d.note ? `<div class="deal-note">${esc(d.note)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderFinMgmtList(){
+  const el = document.getElementById('finMgmtList');
+  if(!el) return;
+  if(!_allDeals.length){ el.innerHTML = '<div class="empty" style="padding:1.5rem">No deals on file yet.</div>'; return; }
+  el.innerHTML = _allDeals.map(d=>`<div class="deal">
+    <div class="deal-hd">
+      <span class="deal-name">${esc(d.name||'Unnamed')} <span style="color:var(--dim);font-size:.7rem">· ${esc(d.ownerName||d.ownerId||'—')}</span></span>
+    </div>
+    <div class="btn-row" style="align-items:center">
+      <input class="form-input" style="max-width:180px" id="cap-${d.id}" type="text" value="${esc(d.capital||'')}" placeholder="e.g. $250,000"/>
+      <button class="btn xs" onclick="saveCapitalInline('${d.id}')">Save Capital</button>
+    </div>
+  </div>`).join('');
+}
+
+function resetDealForm(){
+  document.getElementById('dealEditId').value = '';
+  document.getElementById('dealName').value = '';
+  document.getElementById('dealDivision').value = 'Alliance';
+  document.getElementById('dealPosition').value = '';
+  document.getElementById('dealStatus').value = 'active';
+  document.getElementById('dealDate').value = '';
+  document.getElementById('dealCapital').value = '';
+  document.getElementById('dealNote').value = '';
+  document.getElementById('dealSaveBtn').textContent = 'Create Deal →';
+  document.getElementById('dealCancelBtn').style.display = 'none';
+}
+
+function editDealById(id){
+  const d = _allDeals.find(x=>String(x.id)===String(id));
+  if(!d){ toast('Deal not found in the loaded list — try Refresh', 'err'); return; }
+  document.getElementById('dealEditId').value = d.id;
+  document.getElementById('dealOwnerType').value = d.ownerType || 'member';
+  refreshDealOwnerOptions();
+  document.getElementById('dealOwnerId').value = d.ownerId || '';
+  document.getElementById('dealName').value = d.name || '';
+  document.getElementById('dealDivision').value = d.division || 'Alliance';
+  document.getElementById('dealPosition').value = d.position || '';
+  document.getElementById('dealStatus').value = (d.status||'active').toLowerCase();
+  document.getElementById('dealDate').value = d.date || '';
+  document.getElementById('dealCapital').value = d.capital || '';
+  document.getElementById('dealNote').value = d.note || '';
+  document.getElementById('dealSaveBtn').textContent = 'Update Deal →';
+  document.getElementById('dealCancelBtn').style.display = 'inline-block';
+  goTo('deals');
+  document.getElementById('dealMgmtCard')?.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+async function saveDeal(){
+  const id = document.getElementById('dealEditId').value;
+  const ownerType = document.getElementById('dealOwnerType').value;
+  const ownerId   = document.getElementById('dealOwnerId').value;
+  const payload = {
+    ownerType, ownerId,
+    name: document.getElementById('dealName').value.trim(),
+    division: document.getElementById('dealDivision').value,
+    position: document.getElementById('dealPosition').value.trim(),
+    status: document.getElementById('dealStatus').value,
+    date: document.getElementById('dealDate').value.trim(),
+    capital: document.getElementById('dealCapital').value.trim(),
+    note: document.getElementById('dealNote').value.trim(),
+  };
+  if(!ownerId){ toast('Select an owner (member or group)', 'err'); return; }
+  if(!payload.name){ toast('Deal name required', 'err'); return; }
+  try{
+    let res;
+    if(id) res = await workerFetch(`/deals/${id}`, { method:'PUT', body: JSON.stringify(payload) });
+    else   res = await workerFetch('/deals', { method:'POST', body: JSON.stringify(payload) });
+    if(!res.ok){ const d = await res.json(); throw new Error(d.error || `HTTP ${res.status}`); }
+    toast(id ? 'Deal updated' : 'Deal created', 'ok');
+    logAct(`${id?'Updated':'Created'} deal: "${payload.name}"`, true);
+    resetDealForm();
+    await loadAllDeals();
+    if(ownerType==='member' && ownerId===_U?.uid){
+      _U.deals = await LVOAuth.myDeals();
+      renderDeals(_U.deals, _U.tier, _U.isAdmin);
+      renderFin(_U.deals, _U.tier, _U.isAdmin);
+    }
+  }catch(e){ toast('Failed: '+e.message, 'err'); }
+}
+
+async function deleteDeal(id){
+  if(!confirm('Delete this deal? This cannot be undone.')) return;
+  try{
+    const res = await workerFetch(`/deals/${id}`, { method:'DELETE' });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Deal deleted', 'ok');
+    logAct('Deleted a deal', true);
+    await loadAllDeals();
+    if(_U){
+      _U.deals = await LVOAuth.myDeals();
+      renderDeals(_U.deals, _U.tier, _U.isAdmin);
+      renderFin(_U.deals, _U.tier, _U.isAdmin);
+    }
+  }catch(e){ toast('Failed: '+e.message, 'err'); }
+}
+
+async function saveCapitalInline(id){
+  const input = document.getElementById('cap-'+id);
+  if(!input) return;
+  try{
+    const res = await workerFetch(`/deals/${id}`, { method:'PUT', body: JSON.stringify({ capital: input.value.trim() }) });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    toast('Capital updated', 'ok');
+    logAct('Updated deal capital', true);
+    await loadAllDeals();
+    if(_U){
+      _U.deals = await LVOAuth.myDeals();
+      renderFin(_U.deals, _U.tier, _U.isAdmin);
+    }
+  }catch(e){ toast('Failed: '+e.message, 'err'); }
 }
 
 /* ══════════════════════════════════════════════
